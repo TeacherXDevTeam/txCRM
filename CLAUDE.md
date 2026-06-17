@@ -132,6 +132,19 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=   # server-only, never expose to client
 ```
 
+## CurrentState Rule
+
+**Her görev tamamlandıktan sonra `CurrentState.md` dosyasını güncelle.**
+
+- Yapılan değişikliği maksimum 2-3 cümle ile özetle.
+- Tüm sistemi yeniden açıklamak yerine sadece son işlemi "Son İşlem" satırına ekle.
+- Format:
+  ```
+  ### Son İşlem — <Modül/Konu> (tarih)
+  <2-3 cümle özet>
+  ```
+- Eğer `CurrentState.md` yoksa sıfırdan oluştur.
+
 ## Key Reference
 
 Full PRD (modules, DB schema, permission matrix, roadmap): `teacherx_crm_prd.md`
