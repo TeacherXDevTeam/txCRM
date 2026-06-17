@@ -1,0 +1,214 @@
+{
+  "version": "1.0",
+  "wip_discipline": "WIP=1: Bir özellik 'passing' olmadan yenisi 'active' yapılamaz.",
+  "verification_policy": "Ajanlar 'passing' durumunu kendileri ilan edemez. Sadece doğrulama komutu başarıyla çalıştıktan sonra durum güncellenir.",
+  "phases": [
+    {
+      "id": "faz-0",
+      "name": "Kurulum",
+      "features": [
+        {
+          "id": "F00-01",
+          "name": "Next.js 14 scaffolding",
+          "behavior": "npm run dev çalışır, localhost:3000 yanıt verir",
+          "verification": "curl -f http://localhost:3000 && npm run build && npm run type-check",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F00-02",
+          "name": "Supabase schema migration",
+          "behavior": "Tüm 20+ tablo (PRD §4) lokal Supabase'de oluşturulmuş, npx supabase db push başarılı",
+          "verification": "npx supabase db push && npx supabase gen types typescript --local > types/database.ts",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F00-03",
+          "name": "RLS politikaları",
+          "behavior": "Admin/member/viewer rolleri için RLS testleri geçer (leadler, sözleşmeler kısıtlı)",
+          "verification": "npx supabase test db",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F00-04",
+          "name": "Auth akışı",
+          "behavior": "Email/şifre ile giriş yapılabilir, oturum açık kalır, /dashboard'a yönlendirilir",
+          "verification": "npm run test:e2e -- --spec auth",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F00-05",
+          "name": "M9 Ekip & Rol yönetimi",
+          "behavior": "Admin kullanıcı oluşturabilir, rol atayabilir, viewer okuma-dışı işlem yapamaz",
+          "verification": "npm run test -- --grep 'team-members'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "id": "faz-1",
+      "name": "Core Varlıklar",
+      "features": [
+        {
+          "id": "F01-01",
+          "name": "M0 Contact — CRUD + duplicate detection",
+          "behavior": "Kişi oluşturulur, listelenir, düzenlenir, silinir. Aynı email ile ikinci kayıt engellenir.",
+          "verification": "npm run test -- --grep 'contacts'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F01-02",
+          "name": "M1 Okul — liste, detay, koordinatör, activity log",
+          "behavior": "Okul oluşturulur, koordinatör eklenir, activity log girilir, onboarding progress bar gösterilir",
+          "verification": "npm run test -- --grep 'schools'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F01-03",
+          "name": "M6 Eğitmen — profil, uzmanlık, atama geçmişi",
+          "behavior": "Eğitmen profili oluşturulur, uzmanlık alanına göre filtreleme çalışır",
+          "verification": "npm run test -- --grep 'trainers'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "id": "faz-2",
+      "name": "Eğitim & Ticari",
+      "features": [
+        {
+          "id": "F02-01",
+          "name": "M3 Eğitim Kataloğu + Paketler",
+          "behavior": "Eğitim ve paket oluşturulur, pakete eğitim eklenir, kategori/format/status filtresi çalışır",
+          "verification": "npm run test -- --grep 'trainings'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F02-02",
+          "name": "M7 Sözleşme & Sipariş",
+          "behavior": "Sözleşme oluşturulur, ödeme durumu güncellenir, 30 gün uyarısı çalışır",
+          "verification": "npm run test -- --grep 'contracts'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F02-03",
+          "name": "M4 Atama & Takip",
+          "behavior": "Atama oluşturulur, durum güncellenir, gecikme kırmızı işaret gösterilir",
+          "verification": "npm run test -- --grep 'assignments'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "id": "faz-3",
+      "name": "Satış",
+      "features": [
+        {
+          "id": "F03-01",
+          "name": "M2 Lead Kanban + Activity Log",
+          "behavior": "Kanban board'da kartlar görünür, sürükle-bırak ile stage değişir, activity log girilir",
+          "verification": "npm run test:e2e -- --spec leads",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F03-02",
+          "name": "M2 Lead → Okul dönüşüm akışı",
+          "behavior": "Lead 'kapandi_kazanildi' yapılır, okul otomatik oluşturulur, lead bilgileri ön dolu gelir",
+          "verification": "npm run test -- --grep 'lead-conversion'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "id": "faz-4",
+      "name": "Bilgi Yönetimi",
+      "features": [
+        {
+          "id": "F04-01",
+          "name": "M5 Toplantı Notları + Tiptap",
+          "behavior": "Tiptap editörde not yazılır, markdown render edilir, todo oluşturulur",
+          "verification": "npm run test:e2e -- --spec meetings",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F04-02",
+          "name": "M5 Full-Text Arama",
+          "behavior": "Toplantı notlarında Türkçe kelime aranabilir, sonuçlar <500ms gelir",
+          "verification": "npm run test -- --grep 'meeting-search'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F04-03",
+          "name": "M8 Working Group",
+          "behavior": "WG oluşturulur, faz eklenir, üye atanır, oturum girilir",
+          "verification": "npm run test -- --grep 'working-groups'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "id": "faz-5",
+      "name": "Cila & Launch",
+      "features": [
+        {
+          "id": "F05-01",
+          "name": "M10 Dashboard metrikleri",
+          "behavior": "7 dashboard metriği (PRD §10) doğru hesaplanır ve gösterilir",
+          "verification": "npm run test -- --grep 'dashboard'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F05-02",
+          "name": "CSV import (Contacts + Schools)",
+          "behavior": "CSV yüklenir, kayıtlar oluşturulur, duplicate'ler raporlanır",
+          "verification": "npm run test -- --grep 'csv-import'",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        },
+        {
+          "id": "F05-03",
+          "name": "Production deploy — Vercel",
+          "behavior": "Vercel'de production URL erişilebilir, auth çalışır, DB bağlantısı stabil",
+          "verification": "curl -f https://txcrm.vercel.app/api/health",
+          "state": "not_started",
+          "passes": false,
+          "evidence": null
+        }
+      ]
+    }
+  ]
+}
