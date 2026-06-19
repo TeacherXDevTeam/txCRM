@@ -30,8 +30,10 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+  // PoC (DENEME): /deneme login gerektirmesin — yalnızca bu branch'te.
+  const isPublic = isAuthPage || request.nextUrl.pathname.startsWith("/deneme");
 
-  if (!user && !isAuthPage) {
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
