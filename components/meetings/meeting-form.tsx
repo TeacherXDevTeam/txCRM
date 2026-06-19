@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X, Tag, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -40,6 +40,32 @@ export function MeetingForm({ meeting, contacts, members, currentUserId, onClose
     new Set(meeting?.attendee_ids ?? [])
   );
 
+  // Okul ziyareti: okul + koordinatör bağlama (polymorphic related_entity)
+  const [schools, setSchools] = useState<{ id: string; name: string }[]>([]);
+  const [coordinators, setCoordinators] = useState<
+    { school_id: string; contact_id: string; full_name: string }[]
+  >([]);
+  const [schoolId, setSchoolId] = useState<string>(
+    meeting?.related_entity_type === "school" ? meeting?.related_entity_id ?? "" : ""
+  );
+  const [coordinatorId, setCoordinatorId] = useState<string>("");
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("schools").select("id, name").order("name").then(({ data }) => {
+      setSchools((data as unknown as { id: string; name: string }[]) ?? []);
+    });
+    supabase
+      .from("coordinators")
+      .select("school_id, contact_id, contact:contacts(full_name)")
+      .then(({ data }) => {
+        setCoordinators(
+          ((data as unknown as { school_id: string; contact_id: string; contact: { full_name: string } | null }[]) ?? [])
+            .map((c) => ({ school_id: c.school_id, contact_id: c.contact_id, full_name: c.contact?.full_name ?? "—" }))
+        );
+      });
+  }, []);
+
   function set(field: string, value: string) {
     setForm((p) => ({ ...p, [field]: value }));
   }
@@ -70,6 +96,9 @@ export function MeetingForm({ meeting, contacts, members, currentUserId, onClose
     if (!form.title.trim())  { setError("Başlık zorunludur."); return; }
     if (!form.meeting_date)  { setError("Tarih zorunludur.");  return; }
 
+    const isVisit = form.meeting_type === "okul_ziyareti";
+    if (isVisit && !schoolId) { setError("Okul ziyareti için okul seçin."); return; }
+
     setLoading(true);
     const supabase = createClient();
     const base = {
@@ -78,6 +107,8 @@ export function MeetingForm({ meeting, contacts, members, currentUserId, onClose
       meeting_type: form.meeting_type as Meeting["meeting_type"],
       notes:        form.notes || null,
       tags:         form.tags,
+      related_entity_type: isVisit && schoolId ? "school" : null,
+      related_entity_id:   isVisit && schoolId ? schoolId : null,
     };
 
     let meetingId = meeting?.id;
@@ -91,10 +122,14 @@ export function MeetingForm({ meeting, contacts, members, currentUserId, onClose
     }
 
     if (meetingId) {
+      // koordinatör seçildiyse katılımcılara da ekle
+      const finalAttendees = new Set(attendeeIds);
+      if (isVisit && coordinatorId) finalAttendees.add(coordinatorId);
+
       await supabase.from("meeting_contacts").delete().eq("meeting_id", meetingId);
-      if (attendeeIds.size > 0) {
+      if (finalAttendees.size > 0) {
         await supabase.from("meeting_contacts").insert(
-          [...attendeeIds].map((cid) => ({ meeting_id: meetingId!, contact_id: cid }))
+          [...finalAttendees].map((cid) => ({ meeting_id: meetingId!, contact_id: cid }))
         );
       }
     }
@@ -136,6 +171,44 @@ export function MeetingForm({ meeting, contacts, members, currentUserId, onClose
               </Select>
             </div>
           </div>
+
+          {/* Okul ziyareti → okul + koordinatör bağlama */}
+          {form.meeting_type === "okul_ziyareti" && (
+            <div className="grid grid-cols-2 gap-4 rounded-lg border border-blue-200 bg-blue-50/40 p-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Okul <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  value={schoolId}
+                  onChange={(e) => { setSchoolId(e.target.value); setCoordinatorId(""); }}
+                >
+                  <option value="">Okul seçin...</option>
+                  {schools.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Koordinatör</label>
+                <Select
+                  value={coordinatorId}
+                  onChange={(e) => setCoordinatorId(e.target.value)}
+                  disabled={!schoolId}
+                >
+                  <option value="">{schoolId ? "Koordinatör seçin..." : "Önce okul seçin"}</option>
+                  {coordinators
+                    .filter((c) => c.school_id === schoolId)
+                    .map((c) => (
+                      <option key={c.contact_id} value={c.contact_id}>{c.full_name}</option>
+                    ))}
+                </Select>
+              </div>
+              <p className="col-span-2 text-[11px] text-gray-500">
+                Bu toplantı seçilen okula bağlanır ve &quot;Çalıştığımız Okullar&quot; sayfasında okulun altında listelenir.
+              </p>
+            </div>
+          )}
 
           {/* Attendees */}
           <div>
