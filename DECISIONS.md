@@ -59,6 +59,27 @@ Mimari kararlar, gerekçeleri ve reddedilen alternatifler. Kompaksiyon sırasın
 
 ---
 
+## 2026-06-19 — Platform Foundation (iş akışı katmanı)
+
+**Karar:** Sayfa-bazlı izole modüllerden, modülleri birbirine bağlayabilen ortak bir "iş akışı katmanı"na geçiş. İki katman: (A) her modülün bedavaya kullandığı evrensel zemin, (B) sonradan eklenen iş akışları.
+
+**Zemin (A) prensipleri:**
+- **Status-driven + DB trigger:** Bir varlığın `status`/`stage` değişimi DB trigger ile yan etki üretir (bildirim, olay günlüğü). Mantık tek yerde → hangi client değiştirirse değiştirsin garanti.
+- **Polymorphic SADECE cross-cutting akışlarda:** `notifications` ve olay günlüğü gibi "her şeye bağlanan, tek yönlü okunan, PostgREST ile embed edilmeyen" tablolar `(entity_type, entity_id)` kullanır. `meetings.related_entity_type/id` bu desende (zaten vardı).
+- **İlişkiler için junction table + FK:** Hydrate edilen/iki yönlü sorgulanan ilişkiler (örn. `coordinators`, `meeting_contacts`) gerçek FK'li ara tablolar. "Bir gün lazım olur" diye generic bir `entity_links` tablosu **kurulmadı.**
+- **UI: Wizard yerine yan panel + auto-save** (progressive profiling) hedeflendi; power-user'lar için daha hızlı.
+- **Erişilebilirlik = sorgu, kopya değil:** "atanabilir eğitim" gibi durumlar elle listeye eklenmez; `status` ile filtrelenir.
+
+**Gerekçe:** Senior developer geri bildirimi — Supabase/PostgREST ortamında generic polymorphic `entity_links` FK embed'i kıramaz, VIEW/RPC yükü ve yetim satır getirir. Junction table eklemek 2 dk'lık iştir ve veri bütünlüğü + tek-satır hydrate kazandırır. Polymorphic yalnızca embed gerektirmeyen log/bildirim akışlarında haklı.
+
+**Reddedilenler:**
+- Generic `entity_links` (her şey polymorphic): PostgREST embed sorunu, orphan satırlar.
+- Baştan tam config-güdümlü workflow motoru: erken optimizasyon; hafif başla, kanıt birikince terfi ettir.
+
+**İlk uygulamalar:** Lead teklif akışı (`notifications` tablosu + leads trigger), okul ziyareti ↔ okul eşleme (`meetings.related_entity`). Detay: `PLATFORM_FOUNDATION.md` (deneme branch'inde) ve `CurrentState.md`.
+
+---
+
 <!-- Yeni karar eklerken formatı koru:
 ## YYYY-MM-DD — Konu
 

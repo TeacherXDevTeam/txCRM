@@ -1,6 +1,31 @@
 # TeacherX CRM — Mevcut Durum
 
-> Her işlem sonunda güncellenir. Son güncelleme: 2026-06-17
+> Her işlem sonunda güncellenir. Son güncelleme: 2026-06-19
+
+---
+
+## ⚠️ El Değiştirme Notu (2026-06-19) — ÖNCE BUNU OKU
+
+**Devam eden işler `main`'de DEĞİL, ayrı feature branch'lerde.** `main`'i çekince bunları görmezsin:
+
+| Branch | İçerik | Durum |
+|--------|--------|-------|
+| `feature/lead-teklif-akisi` | Lead aşaması "Teklif İstendi" → operasyona bildirim, "Teklif Verildi" → satışçıya bildirim; header bildirim zili (Realtime); lead formunda inline yeni kişi ekleme | PR'da |
+| `feature/okul-ziyaret-toplanti` | Toplantı türü "Okul Ziyareti" → okul + koordinatör dropdown, okula polymorphic bağlama; okul detayında + "Çalıştığımız Okullar" sayfasında ziyaretler | PR'da |
+| `deneme/platform-foundation-poc` | Platform Foundation PoC (`pf_` tabloları, drawer+auto-save denemesi, `PLATFORM_FOUNDATION.md`) | Deneme |
+
+### 🔴 Paylaşılan buluta ELLE uygulanan DB değişiklikleri (migration dosyaları branch'lerde)
+Bunlar Supabase SQL Editor'den **canlı ortak DB'ye** uygulandı; `main`'deki migration dosyaları bunları YANSITMAZ:
+- `lead_stage_enum`'a eklendi: `ilk_gorusme`, `ihtiyac_analizi`, `teklif_istendi` — *(UI/DB aşama uyumsuzluğu da düzeltildi)*
+- Yeni tablo: **`notifications`** (polymorphic, kişi-bazlı, RLS: `recipient_id = auth.uid()`, Realtime açık)
+- `leads` üzerinde **trigger** `on_lead_stage_change` (INSERT OR UPDATE): aşama → bildirim + activity
+- `leads` RLS genişletildi: operasyon departmanı `teklif_istendi/verildi` aşamasındaki lead'leri görüp güncelleyebilir
+- PoC tabloları: `pf_records`, `pf_activities`, `pf_notifications` (additive, deneme)
+
+> Migration dosyaları: `supabase/migrations/20260619000001_lead_teklif_workflow.sql` (lead-teklif branch'inde), `20260619000000_pf_poc.sql` (deneme branch'inde).
+
+### Mimari yön
+Platform Foundation kararı için bkz. `DECISIONS.md` (2026-06-19) ve `PLATFORM_FOUNDATION.md`. Özet: status-driven + DB trigger, ilişkiler junction+FK, polymorphic yalnızca log/bildirim, UI'da wizard yerine drawer+auto-save.
 
 ---
 
