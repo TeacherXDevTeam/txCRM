@@ -85,3 +85,8 @@ M2 Leadler modülü tamamlandı: Kanban board (6 aktif aşama + kapandı kolonu)
 - **TypeScript tip sorunu**: `Omit<Database[...][Row]>` self-referans → `never` döndürüyor. Fix: explicit `Insert`/`Update` tipleri + `Relationships: []`.
 - **Node versiyonu**: `nvm use 20` gerekiyor (proje Node 20.20.2).
 - **Seed script**: `node supabase/seed.mjs` (kullanıcılar) → `node supabase/seed-data.mjs` (demo data). İkisi ayrı.
+
+---
+
+### Son İşlem — Lead Teklif Akışı + Bildirim (2026-06-19)
+Lead "Teklif İstendi" aşamasına geçince operasyon ekibine, "Teklif Verildi"ye geçince atanan satışçıya otomatik bildirim düşüyor (DB trigger + `notifications` tablosu + header zili, Realtime). `lead_stage_enum`'a `ilk_gorusme/ihtiyac_analizi/teklif_istendi` eklendi, UI/DB aşama uyumsuzluğu giderildi; operasyona teklif aşaması lead'leri için RLS açıldı. `feature/lead-teklif-akisi` branch'i. (Migration: `20260619000001_lead_teklif_workflow.sql`)

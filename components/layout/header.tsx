@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut, User } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 interface HeaderProps {
   user: {
+    id: string;
     full_name: string;
     email: string;
     role: string;
@@ -33,6 +35,7 @@ export function Header({ user }: HeaderProps) {
     <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
       <div />
       <div className="flex items-center gap-4">
+        <NotificationBell memberId={user.id} />
         <div className="flex items-center gap-2 text-sm">
           <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
             <User className="h-4 w-4 text-blue-600" />
