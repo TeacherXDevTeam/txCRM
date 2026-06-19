@@ -2,11 +2,13 @@
 
 > Her oturumun başında bu dosyayı oku. Her oturumun sonunda güncelle ve commit et.
 
+> 🔴 **2026-06-19 — ÖNCE OKU:** Devam eden işler ayrı feature branch'lerde ve ortak buluta elle uygulanmış DB değişiklikleri var. Detay + branch listesi + DB değişiklikleri: **`CurrentState.md` → "El Değiştirme Notu"**. Mimari karar: `DECISIONS.md` (Platform Foundation).
+
 ## Şu Anki Durum
 
-**Faz:** Faz 0 — Kurulum (henüz başlanmadı)  
-**Son güncelleme:** 2026-06-17  
-**Aktif özellik:** —
+**Faz:** Faz 1 — Modüller tamamlandı; Platform Foundation (iş akışı katmanı) başladı  
+**Son güncelleme:** 2026-06-19  
+**Aktif özellik:** Lead teklif akışı + bildirim, okul ziyareti ↔ okul eşleme (feature branch'lerde)
 
 ## Tamamlanan İş
 
