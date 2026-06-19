@@ -36,6 +36,27 @@
 
 ## Aktif Oturum
 
+### Son İşlem — M8 Çalışma Grupları + M9 Ekip (2026-06-19)
+M8 Çalışma Grupları: listeye tıklanınca sağda detay paneli açılan split-layout; detay panelinde Fazlar (satır içi durum güncelleme + faz ekleme), Üyeler (rol ile ekle/çıkar) ve Oturumlar (format, tarih, notlar) sekmeleri. M9 Ekip: admin paneli — kart görünümünde rol değiştirme dropdown'ı ve aktif/pasif toggle; sadece admin rolü bu kontrolleri görebiliyor.
+
+### Son İşlem — M7 Sözleşmeler (2026-06-19)
+M7 Sözleşmeler modülü tamamlandı: 30 gün içinde sona erecek aktif sözleşmeler için sarı uyarı banner'ı, sipariş kalemlerini (eğitim/birim fiyat/adet/indirim/toplam) gösteren expand/collapse kart görünümü, okul/durum/ödeme durumu filtreleri ve CRUD formu eklendi. Erişim kontrolü PRD'ye uygun: sadece admin ve operasyon rolü yazabilir.
+
+### Son İşlem — M6 Eğitmenler (2026-06-19)
+M6 Eğitmenler modülü tamamlandı: avatar baş harfleri, uzmanlık rozet etiketleri, e-posta/telefon linkleri ve yaklaşan atama özeti olan kart görünümü oluşturuldu. Forma predefined uzmanlık chip'leri + serbest alan ekleme özelliği eklendi; yeni eğitmen oluştururken sadece henüz eğitmen profili olmayan kişiler listeleniyor.
+
+### Son İşlem — M5 Toplantılar (2026-06-19)
+M5 Toplantılar modülü tamamlandı: Tiptap zengin metin editörü (bold/italic/başlık/liste toolbar'ı), katılımcı checkbox seçici, etiket ekleme/filtreleme ve kart expand/collapse yapısıyla toplantı notları görünümü oluşturuldu. Her kartın altında inline todo paneli var — kişiye atama, bitiş tarihi, tamamlandı olarak işaretleme ve gecikmeli todo kırmızı gösterimi mevcut.
+
+### Son İşlem — M4 Atamalar (2026-06-18)
+M4 Atamalar modülü tamamlandı: durum özet kartları (tıklanabilir filtre), gecikmeli atama uyarı banner'ı, okul/eğitim/kişi araması ile filtrelenebilir tablo, satır içi durum dropdown'ı ile anlık güncelleme ve CRUD formu (okul, eğitim, eğitmen, sorumlu, tarih, periyot alanları) eklendi.
+
+### Son İşlem — M3 Eğitimler (2026-06-18)
+M3 Eğitimler modülü tamamlandı: "Eğitim Kataloğu" ve "Paketler" sekme yapısıyla çalışan sayfa oluşturuldu. Katalog sekmesinde kategori/format/durum filtresi ile kart görünümü, Paketler sekmesinde checkbox tabanlı eğitim seçici içeren paket formu ve mevcut paketlerin detay kartları mevcut. Tüm CRUD işlemleri (ekle/düzenle/sil) canWrite rolüne bağlı, TypeScript sıfır hata.
+
+### Son İşlem — M2 Leadler (2026-06-17)
+M2 Leadler modülü tamamlandı: Kanban board (6 aktif aşama + kapandı kolonu) ve liste görünümü arasında geçiş yapılabiliyor. Her kartta aşama dropdown'ı ile anlık stage güncellemesi, yeni lead ekleme formu (kişi/aşama/kaynak/değer/tarih/atanan), pipeline özet metrikleri (aktif lead sayısı, toplam değer, kazanılan, geciken aksiyonlar) ve lead düzenleme/silme özellikleri eklendi.
+
 ### Son İşlem — M1 Okullar ✅
 - **M1 Okullar** (`/okullar`):
   - Liste: isim/ilçe arama + durum/tip filtresi; üst summary kartlar (tıklanabilir filtre)
