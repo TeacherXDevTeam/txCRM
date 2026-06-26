@@ -28,6 +28,15 @@ export function LeadForm({ lead, defaultStage = "yeni_baglanti", onClose }: Lead
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [members, setMembers]   = useState<MemberOption[]>([]);
 
+  // Kişi: mevcut listeden seç ("select") veya hızlı yeni kişi ekle ("new")
+  const [contactMode, setContactMode] = useState<"select" | "new">("select");
+  const [newContact, setNewContact] = useState({
+    full_name: "", organization: "", phone: "", contact_type: "potansiyel",
+  });
+  function setNew(field: string, value: string) {
+    setNewContact((prev) => ({ ...prev, [field]: value }));
+  }
+
   const [form, setForm] = useState({
     contact_id:      lead?.contact_id      ?? "",
     stage:           lead?.stage           ?? defaultStage,
@@ -55,13 +64,35 @@ export function LeadForm({ lead, defaultStage = "yeni_baglanti", onClose }: Lead
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!form.contact_id) { setError("Kişi seçimi zorunludur."); return; }
+
+    if (contactMode === "new") {
+      if (!newContact.full_name.trim()) { setError("Kişi adı zorunludur."); return; }
+    } else if (!form.contact_id) {
+      setError("Kişi seçimi zorunludur."); return;
+    }
 
     setLoading(true);
     const supabase = createClient();
 
+    // Hızlı yeni kişi: önce contacts'a ekle, sonra o id ile lead oluştur
+    let contactId = form.contact_id;
+    if (contactMode === "new") {
+      const { data: c, error: cErr } = await supabase
+        .from("contacts")
+        .insert({
+          full_name:    newContact.full_name.trim(),
+          organization: newContact.organization.trim() || null,
+          phone:        newContact.phone.trim() || null,
+          contact_type: newContact.contact_type as never,
+        })
+        .select("id")
+        .single();
+      if (cErr || !c) { setError(cErr?.message ?? "Kişi oluşturulamadı."); setLoading(false); return; }
+      contactId = (c as { id: string }).id;
+    }
+
     const payload = {
-      contact_id:       form.contact_id,
+      contact_id:       contactId,
       stage:            form.stage as Lead["stage"],
       assigned_to:      form.assigned_to || null,
       source:           form.source as Lead["source"],
@@ -92,17 +123,60 @@ export function LeadForm({ lead, defaultStage = "yeni_baglanti", onClose }: Lead
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Kişi <span className="text-red-500">*</span>
-            </label>
-            <Select value={form.contact_id} onChange={(e) => set("contact_id", e.target.value)}>
-              <option value="">Kişi seçin...</option>
-              {contacts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.full_name}{c.organization ? ` — ${c.organization}` : ""}
-                </option>
-              ))}
-            </Select>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Kişi <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => { setContactMode((m) => (m === "select" ? "new" : "select")); setError(null); }}
+                className="text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                {contactMode === "select" ? "+ Yeni kişi ekle" : "← Listeden seç"}
+              </button>
+            </div>
+
+            {contactMode === "select" ? (
+              <Select value={form.contact_id} onChange={(e) => set("contact_id", e.target.value)}>
+                <option value="">Kişi seçin...</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.full_name}{c.organization ? ` — ${c.organization}` : ""}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3">
+                <Input
+                  autoFocus
+                  value={newContact.full_name}
+                  onChange={(e) => setNew("full_name", e.target.value)}
+                  placeholder="Ad Soyad *"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    value={newContact.organization}
+                    onChange={(e) => setNew("organization", e.target.value)}
+                    placeholder="Kurum"
+                  />
+                  <Input
+                    value={newContact.phone}
+                    onChange={(e) => setNew("phone", e.target.value)}
+                    placeholder="Telefon"
+                  />
+                </div>
+                <Select value={newContact.contact_type} onChange={(e) => setNew("contact_type", e.target.value)}>
+                  <option value="potansiyel">Potansiyel</option>
+                  <option value="okul_koordinatoru">Okul Koordinatörü</option>
+                  <option value="partner">Partner</option>
+                  <option value="egitmen">Eğitmen</option>
+                  <option value="diger">Diğer</option>
+                </Select>
+                <p className="text-[11px] text-gray-500">
+                  Bu kişi Kişiler listesine de eklenecek.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
