@@ -54,6 +54,7 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
     { data: rawContracts },
     { data: rawMilestones },
     { data: rawActivities },
+    { data: rawMeetings },
   ] = await Promise.all([
     supabase.from("coordinators")
       .select("id, is_primary, contact:contacts(id, full_name, email, phone, title)")
@@ -74,6 +75,11 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
       .eq("school_id", params.id)
       .order("activity_date", { ascending: false })
       .limit(5),
+    supabase.from("meetings")
+      .select("id, title, meeting_date, meeting_type, meeting_contacts(contact:contacts(full_name))")
+      .eq("related_entity_type", "school")
+      .eq("related_entity_id", params.id)
+      .order("meeting_date", { ascending: false }),
   ]);
 
   const coords      = (rawCoords      ?? []) as unknown as CoordRow[];
@@ -81,6 +87,13 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
   const contracts   = (rawContracts   ?? []) as unknown as ContractRow[];
   const milestones  = (rawMilestones  ?? []) as unknown as { milestone_key: string }[];
   const activities  = (rawActivities  ?? []) as unknown as ActivityRow[];
+  const meetings    = ((rawMeetings ?? []) as unknown as {
+    id: string; title: string; meeting_date: string; meeting_type: string;
+    meeting_contacts: { contact: { full_name: string } | null }[];
+  }[]).map((m) => ({
+    id: m.id, title: m.title, meeting_date: m.meeting_date,
+    attendees: (m.meeting_contacts ?? []).map((mc) => mc.contact?.full_name).filter(Boolean) as string[],
+  }));
 
   const completedMilestoneKeys = milestones.map((m) => m.milestone_key);
 
@@ -254,6 +267,35 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
               </div>
             </section>
           )}
+
+          {/* Okul Ziyaretleri / Toplantılar */}
+          <section className="bg-white rounded-xl border p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-gray-900">Toplantılar & Ziyaretler</h2>
+              <Link href="/toplantilar" className="text-xs font-medium text-blue-600 hover:underline">
+                + Toplantı ekle
+              </Link>
+            </div>
+            {meetings.length === 0 ? (
+              <p className="text-sm text-gray-400">
+                Bu okula bağlı toplantı yok. Toplantılar&apos;dan tür &quot;Okul Ziyareti&quot; seçip bu okulu bağlayın.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {meetings.map((m) => (
+                  <div key={m.id} className="rounded-md border-l-2 border-blue-300 bg-gray-50 px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-800">🏫 {m.title}</span>
+                      <span className="text-xs text-gray-400 shrink-0">{formatDate(m.meeting_date)}</span>
+                    </div>
+                    {m.attendees.length > 0 && (
+                      <p className="mt-0.5 text-xs text-gray-500">{m.attendees.join(", ")}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
 
         {/* Right column — Onboarding */}
