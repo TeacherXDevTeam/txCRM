@@ -49,6 +49,7 @@ export function ContractForm({ contract, schools, packages, trainings, currentUs
     contract_value:  contract?.contract_value?.toString() ?? "",
     payment_status:  contract?.payment_status   ?? "odeme_bekleniyor",
     status:          contract?.status           ?? "aktif",
+    expected_teacher_count: (contract as { expected_teacher_count?: number | null } | undefined)?.expected_teacher_count?.toString() ?? "",
     notes:           contract?.notes            ?? "",
   });
 
@@ -92,16 +93,17 @@ export function ContractForm({ contract, schools, packages, trainings, currentUs
       contract_value: parseFloat(form.contract_value),
       payment_status: form.payment_status as Contract["payment_status"],
       status:         form.status as Contract["status"],
+      expected_teacher_count: form.expected_teacher_count ? parseInt(form.expected_teacher_count, 10) : null,
       notes:          form.notes.trim() || null,
       created_by:     currentUserId,
     };
 
     let contractId = contract?.id;
     if (contract) {
-      const { error } = await supabase.from("contracts").update(payload).eq("id", contract.id);
+      const { error } = await supabase.from("contracts").update(payload as never).eq("id", contract.id);
       if (error) { setError(error.message); setLoading(false); return; }
     } else {
-      const { data, error } = await supabase.from("contracts").insert(payload).select("id").single();
+      const { data, error } = await supabase.from("contracts").insert(payload as never).select("id").single();
       if (error) { setError(error.message); setLoading(false); return; }
       contractId = (data as any).id;
     }
@@ -192,6 +194,12 @@ export function ContractForm({ contract, schools, packages, trainings, currentUs
               <input type="checkbox" id="auto_renew" checked={form.auto_renew} onChange={(e) => set("auto_renew", e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
               <label htmlFor="auto_renew" className="text-sm text-gray-700">Otomatik yenile</label>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Olması Gereken Öğretmen Sayısı</label>
+              <Input type="number" min="0" value={form.expected_teacher_count}
+                onChange={(e) => set("expected_teacher_count", e.target.value)} placeholder="örn. 120" />
+              <p className="mt-1 text-[11px] text-gray-400">Raporlar sayfasındaki &quot;sözleşme kapsamı&quot; karşılaştırması bu sayıyı kullanır.</p>
             </div>
           </div>
 
