@@ -10,9 +10,10 @@
 
 | Branch | İçerik | Durum |
 |--------|--------|-------|
-| `feature/lead-teklif-akisi` | Lead aşaması "Teklif İstendi" → operasyona bildirim, "Teklif Verildi" → satışçıya bildirim; header bildirim zili (Realtime); lead formunda inline yeni kişi ekleme | PR'da |
-| `feature/okul-ziyaret-toplanti` | Toplantı türü "Okul Ziyareti" → okul + koordinatör dropdown, okula polymorphic bağlama; okul detayında + "Çalıştığımız Okullar" sayfasında ziyaretler | PR'da |
-| `deneme/platform-foundation-poc` | Platform Foundation PoC (`pf_` tabloları, drawer+auto-save denemesi, `PLATFORM_FOUNDATION.md`) | Deneme |
+| `feature/lead-teklif-akisi` | Lead "Teklif İstendi"→operasyon, "Teklif Verildi"→satışçı bildirimi; header zili (Realtime); inline kişi ekleme | ✅ main'e merge |
+| `feature/okul-ziyaret-toplanti` | "Okul Ziyareti" türünde okul+koordinatör dropdown, okula polymorphic bağlama; okul detayı + "Çalıştığımız Okullar" sayfası | ✅ main'e merge |
+| `feature/rapor-dashboard` | **Raporlar** menüsü: Excel (kurs-bazlı) yükleme → yükleme anında kuruma göre özetleme (JSONB) → kurum dropdown'lı dashboard (şube/kurs/bucket grafikleri, sözleşme karşılaştırması, risk listesi, veri temizleme). `xlsx`+`recharts` eklendi | PR'da |
+| `deneme/platform-foundation-poc` | Platform Foundation PoC (`pf_` tabloları, `PLATFORM_FOUNDATION.md`) | Deneme |
 
 ### 🔴 Paylaşılan buluta ELLE uygulanan DB değişiklikleri (migration dosyaları branch'lerde)
 Bunlar Supabase SQL Editor'den **canlı ortak DB'ye** uygulandı; `main`'deki migration dosyaları bunları YANSITMAZ:
@@ -21,8 +22,9 @@ Bunlar Supabase SQL Editor'den **canlı ortak DB'ye** uygulandı; `main`'deki mi
 - `leads` üzerinde **trigger** `on_lead_stage_change` (INSERT OR UPDATE): aşama → bildirim + activity
 - `leads` RLS genişletildi: operasyon departmanı `teklif_istendi/verildi` aşamasındaki lead'leri görüp güncelleyebilir
 - PoC tabloları: `pf_records`, `pf_activities`, `pf_notifications` (additive, deneme)
+- **Rapor (rapor-dashboard branch):** `contracts.expected_teacher_count` kolonu; `report_uploads` tablosu; `report_kurum_stats` (kurum başına JSONB özet); eski `report_rows` DROP edildi. RLS: admin + operasyon. Migration: `20260619000002_*` ve `20260619000003_*`.
 
-> Migration dosyaları: `supabase/migrations/20260619000001_lead_teklif_workflow.sql` (lead-teklif branch'inde), `20260619000000_pf_poc.sql` (deneme branch'inde).
+> Migration dosyaları: `supabase/migrations/20260619000001_lead_teklif_workflow.sql`, `20260619000002_rapor_dashboard.sql`, `20260619000003_rapor_v2_ozet.sql`, `20260619000000_pf_poc.sql` (deneme branch'inde).
 
 ### Mimari yön
 Platform Foundation kararı için bkz. `DECISIONS.md` (2026-06-19) ve `PLATFORM_FOUNDATION.md`. Özet: status-driven + DB trigger, ilişkiler junction+FK, polymorphic yalnızca log/bildirim, UI'da wizard yerine drawer+auto-save.
