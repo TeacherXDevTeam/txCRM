@@ -17,7 +17,15 @@ import {
   BarChart3,
 } from "lucide-react";
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  roles: string[];
+  departments?: string[]; // tanımlıysa: admin VEYA bu departmanlardan biri görür
+};
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "member", "viewer"] },
   { href: "/kisiler", label: "Kişiler", icon: Users2, roles: ["admin", "member", "viewer"] },
   { href: "/okullar", label: "Okullar", icon: School, roles: ["admin", "member", "viewer"] },
@@ -27,20 +35,26 @@ const navItems = [
   { href: "/toplantilar", label: "Toplantılar", icon: MessageSquare, roles: ["admin", "member", "viewer"] },
   { href: "/egitmenler", label: "Eğitmenler", icon: GraduationCap, roles: ["admin", "member", "viewer"] },
   { href: "/sozlesmeler", label: "Sözleşmeler", icon: FileText, roles: ["admin"] },
+  { href: "/raporlar", label: "Raporlar", icon: BarChart3, roles: ["admin", "member"], departments: ["operasyon"] },
   { href: "/calisma-gruplari", label: "Çalışma Grupları", icon: Users, roles: ["admin", "member", "viewer"] },
   { href: "/ekip", label: "Ekip", icon: Users, roles: ["admin"] },
 ];
 
 interface SidebarProps {
   role: "admin" | "member" | "viewer";
+  department?: string | null;
 }
 
-export function Sidebar({ role }: SidebarProps) {
+export function Sidebar({ role, department }: SidebarProps) {
   const pathname = usePathname();
 
-  const visibleItems = navItems.filter((item) =>
-    item.roles.includes(role)
-  );
+  const visibleItems = navItems.filter((item) => {
+    if (!item.roles.includes(role)) return false;
+    if (item.departments && role !== "admin") {
+      return department ? item.departments.includes(department) : false;
+    }
+    return true;
+  });
 
   return (
     <aside className="w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col">

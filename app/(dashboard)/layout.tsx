@@ -38,7 +38,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar role={member.role} />
+      <Sidebar role={member.role} department={member.department} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header user={member} />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
