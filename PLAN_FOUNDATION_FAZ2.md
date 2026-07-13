@@ -59,7 +59,7 @@ Her iş ayrı branch + PR. İş 3 ve 4 aynı branch'te yapılabilir (ortak pg_cr
   3. `activities`'e olay (mevcut trigger'da aşama değişimi zaten yazılıyor — ekstra satır gerekmez).
 - `school_id` NULL ise okul adımı atlanır, bildirim yine gider (operasyon okulu sonradan bağlar).
 
-**Uygulama:** Mevcut `on_lead_stage_change()` fonksiyonunu `CREATE OR REPLACE` ile genişlet (yeni trigger ekleme — mevcut fonksiyonun güncel gövdesi `supabase/migrations/20260619000001_lead_teklif_workflow.sql`'de; oradaki fonksiyona yeni bir `IF NEW.stage = 'kapandi_kazanildi' THEN ... END IF;` bloğu ekle). SQL'i kullanıcıya ver + `supabase/migrations/2026MMDD000000_lead_kazanildi_koprusu.sql` olarak kaydet.
+**Uygulama:** Mevcut `on_lead_stage_change()` fonksiyonunu `CREATE OR REPLACE` ile genişlet (yeni trigger ekleme — mevcut fonksiyonun güncel gövdesi `supabase/migrations/20260619000001_lead_teklif_workflow.sql`'de; oradaki fonksiyona yeni bir `IF NEW.stage = 'kapandi_kazanildi' THEN ... END IF;` bloğu ekle). **KRİTİK:** Bu yeni bloğu mevcut fonksiyondaki `IF changed THEN ... END IF;` guard'ının **içine** yaz (guard: `changed := (TG_OP = 'INSERT') OR (NEW.stage IS DISTINCT FROM OLD.stage)`). Guard'ın dışına konursa, zaten kazanılmış bir lead'in her sonraki UPDATE'inde okul-aktifleştirme + operasyon fan-out'u **tekrar tetiklenir** (mükerrer bildirim). SQL'i kullanıcıya ver + `supabase/migrations/2026MMDD000000_lead_kazanildi_koprusu.sql` olarak kaydet.
 
 **UI:** Değişiklik gerekmez (zil `entity_type='lead'`i zaten `/leadler`e yönlendiriyor).
 
@@ -127,7 +127,7 @@ Her iş ayrı branch + PR. İş 3 ve 4 aynı branch'te yapılabilir (ortak pg_cr
 
 - PoC'deki **drawer + auto-save** deseninin gerçek Lead formuna taşınması (`DECISIONS.md` 2026-06-19 kararı; PoC kodu `deneme/platform-foundation-poc` branch'inde)
 - **Global arama** (Supabase FTS — PRD §'de `meetings.notes` tsvector planı var)
-- `pf_records/pf_activities/pf_notifications` tablolarının buluttan DROP edilmesi (komutlar `supabase/migrations/20260619000000_pf_poc.sql` sonunda hazır — kullanıcı onayıyla)
+- `pf_records/pf_activities/pf_notifications` tablolarının buluttan DROP edilmesi (komutlar `supabase/migrations/20260619000000_pf_poc.sql` sonunda hazır — **bu dosya `main`'de değil, yalnızca `deneme/platform-foundation-poc` branch'inde**; oradan al — kullanıcı onayıyla)
 - 81 okulun "Belirtilmedi" şehri için satır içi toplu düzenleme
 - `computeStatsByKurum` (components/reports/report-client.ts) için birim test — saf fonksiyon, test altyapısının ilk adımı olarak ideal
 - Rapor dönem karşılaştırması (aylık snapshot'lar birikince); e-posta bildirimi; atama takvim görünümü; rapor kurum adı ↔ okul elle eşleştirme ekranı
