@@ -67,7 +67,7 @@ export default async function RaporlarPage() {
           </p>
         </div>
         {latest && (
-          <ClearUploadButton uploadId={latest.id} rowCount={latest.satir_sayisi} />
+          <ClearUploadButton rowCount={latest.satir_sayisi} />
         )}
       </div>
 

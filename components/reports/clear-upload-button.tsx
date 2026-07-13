@@ -6,21 +6,21 @@ import { Trash2 } from "lucide-react";
 import { createReportClient } from "./report-client";
 
 interface Props {
-  uploadId: string;
   rowCount: number;
 }
 
-export function ClearUploadButton({ uploadId, rowCount }: Props) {
+export function ClearUploadButton({ rowCount }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function handleClear() {
-    if (!confirm(`Bu yükleme ve ${rowCount.toLocaleString("tr-TR")} kayıt tamamen silinsin mi?\nDashboard temizlenir, sonra yeni rapor yükleyebilirsin. Bu işlem geri alınamaz.`)) return;
+    if (!confirm(`Tüm yüklenmiş rapor verisi (${rowCount.toLocaleString("tr-TR")} kayıt) silinsin mi?\nDashboard temizlenir, sonra yeni rapor yükleyebilirsin. Bu işlem geri alınamaz.`)) return;
     setBusy(true);
     const sb = createReportClient();
-    // report_uploads silinince report_rows cascade ile silinir
-    const { error } = await sb.from("report_uploads").delete().eq("id", uploadId);
-    if (error) { alert("Silinemedi: " + error.message); setBusy(false); return; }
+    // Tüm yüklemeleri sil (eski/yetim kayıtlar dahil); report_kurum_stats cascade ile gider
+    const { error } = await sb.from("report_uploads").delete().gte("satir_sayisi", 0);
+    setBusy(false);
+    if (error) { alert("Silinemedi: " + error.message); return; }
     router.refresh();
   }
 
