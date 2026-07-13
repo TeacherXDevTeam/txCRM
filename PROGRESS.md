@@ -4,6 +4,8 @@
 
 > 🔴 **2026-06-19 — ÖNCE OKU:** Devam eden işler ayrı feature branch'lerde ve ortak buluta elle uygulanmış DB değişiklikleri var. Detay + branch listesi + DB değişiklikleri: **`CurrentState.md` → "El Değiştirme Notu"**. Mimari karar: `DECISIONS.md` (Platform Foundation).
 
+> 🟢 **2026-07-13 — SIRADAKI İŞ PLANI HAZIR:** Faz 2 uygulama planı **`PLAN_FOUNDATION_FAZ2.md`** dosyasında (5 iş: tip yenileme, lead→sözleşme köprüsü, sözleşme/lead hatırlatma cron'ları, dashboard). Uygulamaya başlamadan önce o dosyayı ve içindeki "kritik bağlam" bölümünü oku.
+
 ## Şu Anki Durum
 
 **Faz:** Faz 1 — Modüller tamamlandı; Platform Foundation (iş akışı katmanı) başladı  
