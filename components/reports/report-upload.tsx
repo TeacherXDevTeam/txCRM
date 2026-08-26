@@ -51,7 +51,7 @@ export function ReportUpload({ currentUserId }: Props) {
       try {
         const wb = XLSX.read(ev.target?.result, { type: "array" });
         const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-        const parsed: CourseRow[] = raw.map((r) => {
+        const parsed: CourseRow[] = raw.map((r: Record<string, unknown>) => {
           let ad = "", soyad = "", eposta = "", kurum = "", sube = "", kurs = "", ilerleme = 0, sertifika = "";
           for (const key of Object.keys(r)) {
             const f = MAP[norm(key)];
@@ -104,8 +104,8 @@ export function ReportUpload({ currentUserId }: Props) {
     router.refresh();
   }
 
-  const kurumCount = new Set(rows.map((r) => r.kurum)).size;
-  const teacherCount = new Set(rows.map((r) => r.eposta || r.ad)).size;
+  const kurumCount = new Set(rows.map((r: CourseRow) => r.kurum)).size;
+  const teacherCount = new Set(rows.map((r: CourseRow) => r.eposta || r.ad)).size;
 
   return (
     <div className="rounded-xl border bg-white p-5">

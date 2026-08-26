@@ -121,7 +121,7 @@ export interface Database {
           id: string;
           contact_id: string;
           school_id: string | null;
-          stage: "yeni_baglanti" | "ilk_gorusme" | "ihtiyac_analizi" | "teklif_hazirlaniyor" | "teklif_verildi" | "gorusme_yapildi" | "kapandi_kazanildi" | "kapandi_kaybedildi";
+          stage: "yeni_baglanti" | "ilk_gorusme" | "ihtiyac_analizi" | "teklif_hazirlaniyor" | "teklif_istendi" | "teklif_verildi" | "gorusme_yapildi" | "kapandi_kazanildi" | "kapandi_kaybedildi";
           assigned_to: string | null;
           source: "referans" | "etkinlik" | "soguk_arama" | "web" | "diger";
           estimated_value: number | null;
@@ -134,7 +134,7 @@ export interface Database {
         Insert: {
           contact_id: string;
           school_id?: string | null;
-          stage?: "yeni_baglanti" | "ilk_gorusme" | "ihtiyac_analizi" | "teklif_hazirlaniyor" | "teklif_verildi" | "gorusme_yapildi" | "kapandi_kazanildi" | "kapandi_kaybedildi";
+          stage?: "yeni_baglanti" | "ilk_gorusme" | "ihtiyac_analizi" | "teklif_hazirlaniyor" | "teklif_istendi" | "teklif_verildi" | "gorusme_yapildi" | "kapandi_kazanildi" | "kapandi_kaybedildi";
           assigned_to?: string | null;
           source?: "referans" | "etkinlik" | "soguk_arama" | "web" | "diger";
           estimated_value?: number | null;
@@ -146,7 +146,7 @@ export interface Database {
         Update: {
           contact_id?: string;
           school_id?: string | null;
-          stage?: "yeni_baglanti" | "ilk_gorusme" | "ihtiyac_analizi" | "teklif_hazirlaniyor" | "teklif_verildi" | "gorusme_yapildi" | "kapandi_kazanildi" | "kapandi_kaybedildi";
+          stage?: "yeni_baglanti" | "ilk_gorusme" | "ihtiyac_analizi" | "teklif_hazirlaniyor" | "teklif_istendi" | "teklif_verildi" | "gorusme_yapildi" | "kapandi_kazanildi" | "kapandi_kaybedildi";
           assigned_to?: string | null;
           source?: "referans" | "etkinlik" | "soguk_arama" | "web" | "diger";
           estimated_value?: number | null;
@@ -239,6 +239,7 @@ export interface Database {
           contract_value: number;
           payment_status: "odeme_bekleniyor" | "kismi" | "tamamlandi";
           status: "aktif" | "suresi_doldu" | "iptal";
+          expected_teacher_count: number | null;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -253,6 +254,7 @@ export interface Database {
           contract_value: number;
           payment_status?: "odeme_bekleniyor" | "kismi" | "tamamlandi";
           status?: "aktif" | "suresi_doldu" | "iptal";
+          expected_teacher_count?: number | null;
           notes?: string | null;
         };
         Relationships: [];
@@ -266,6 +268,7 @@ export interface Database {
           contract_value?: number;
           payment_status?: "odeme_bekleniyor" | "kismi" | "tamamlandi";
           status?: "aktif" | "suresi_doldu" | "iptal";
+          expected_teacher_count?: number | null;
           notes?: string | null;
         };
       };
@@ -619,6 +622,79 @@ export interface Database {
           start_date?: string | null;
           end_date?: string | null;
           status?: "planlandi" | "devam_ediyor" | "tamamlandi";
+        };
+      };
+      notifications: {
+        Row: {
+          id: string;
+          recipient_id: string;
+          type: string;
+          title: string;
+          body: string | null;
+          entity_type: string | null;
+          entity_id: string | null;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          recipient_id: string;
+          type?: string;
+          title: string;
+          body?: string | null;
+          entity_type?: string | null;
+          entity_id?: string | null;
+          is_read?: boolean;
+        };
+        Relationships: [];
+        Update: {
+          type?: string;
+          title?: string;
+          body?: string | null;
+          entity_type?: string | null;
+          entity_id?: string | null;
+          is_read?: boolean;
+        };
+      };
+      report_uploads: {
+        Row: {
+          id: string;
+          uploaded_by: string | null;
+          dosya_adi: string | null;
+          satir_sayisi: number;
+          uploaded_at: string;
+        };
+        Insert: {
+          uploaded_by?: string | null;
+          dosya_adi?: string | null;
+          satir_sayisi?: number;
+        };
+        Relationships: [];
+        Update: {
+          uploaded_by?: string | null;
+          dosya_adi?: string | null;
+          satir_sayisi?: number;
+        };
+      };
+      report_kurum_stats: {
+        Row: {
+          id: string;
+          upload_id: string;
+          kurum: string;
+          teacher_count: number;
+          stats: Json;
+          created_at: string;
+        };
+        Insert: {
+          upload_id: string;
+          kurum: string;
+          teacher_count?: number;
+          stats: Json;
+        };
+        Relationships: [];
+        Update: {
+          kurum?: string;
+          teacher_count?: number;
+          stats?: Json;
         };
       };
     };
