@@ -1,9 +1,9 @@
 # TeacherX CRM — Mevcut Durum
 
-> Her işlem sonunda güncellenir. Son güncelleme: 2026-07-13
+> Her işlem sonunda güncellenir. Son güncelleme: 2026-08-26
 
-### Son İşlem — Faz 2 Uygulama Planı (2026-07-13)
-Sistem analizi yapıldı ve sıradaki 5 işin uygulama planı `PLAN_FOUNDATION_FAZ2.md` olarak kaydedildi (tip yenileme, kazanılan lead→sözleşme köprüsü, pg_cron hatırlatmaları, dashboard komuta merkezi + backlog). Plan, farklı bir AI oturumu tarafından bağımsız uygulanabilecek şekilde yazıldı. Ayrıca PR #6 (rapor Veriyi Temizle düzeltmesi) inceleme bekliyor.
+### Son İşlem — Kritik Sorunlar Çözüldü (2026-08-26)
+npm install ile missing dependencies (recharts, xlsx) kuruldu; types/database.ts yenilenerek 3 yeni tablo (notifications, report_uploads, report_kurum_stats) ve lead_stage_enum yeni değerleri eklendi; report-upload.tsx TypeScript hataları düzeltildi. `npm run type-check` ✅ TEMIZ, `npm run build` ✅ BAŞARILI. Sistem şu an Faz 2 (PLAN_FOUNDATION_FAZ2.md) uygulanmaya hazır.
 
 ---
 
