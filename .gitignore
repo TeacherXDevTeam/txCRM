@@ -37,3 +37,6 @@ next-env.d.ts
 # supabase
 /supabase/.branches
 /supabase/.temp
+
+# Gerçek kişi verisi içeren seed dosyaları (PII — repoya girmemeli)
+/supabase/seed/

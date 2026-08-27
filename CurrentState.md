@@ -1,6 +1,12 @@
 # TeacherX CRM — Mevcut Durum
 
-> Her işlem sonunda güncellenir. Son güncelleme: 2026-08-26
+> Her işlem sonunda güncellenir. Son güncelleme: 2026-08-27
+
+### Son İşlem — Eğitim Kataloğu + Eğitmenler Seed (2026-08-27)
+69 eğitim + 56 tekil eğitmen `supabase/seed/egitim-katalogu.sql` olarak hazırlandı (contacts[egitmen] + trainers + trainings). Eğitim→eğitmen ilişkisinin şemada yeri olmadığı için `trainings`'e additive `default_trainer_id` kolonu eklendi (migration + types güncellemesi bekliyor). category/format best-effort (format='cevrimici' varsayıldı). Dosya `.gitignore` kapsamında.
+
+### Son İşlem — 26-27 Kurum Takip Listesi Aktarımı (2026-08-27)
+Excel (61 kurum) analiz edildi. Uyan alanlar `supabase/seed/26-27-kurumlar.sql` olarak hazırlandı (61 schools + 59 contacts + 59 coordinators + 108 milestones; 10 şehir isimden dolduruldu). Dosya PII içerdiği için `.gitignore`'a alındı, SQL Editor'de çalıştırılacak. Şemada karşılığı olmayan alanlar (ürün/abonelik modeli, genişletilmiş onboarding checklist, şehir zenginleştirme) `PLAN_KURUM_VERISI.md`'de 3 özellik olarak raporlandı.
 
 ### Son İşlem — Kritik Sorunlar Çözüldü (2026-08-26)
 npm install ile missing dependencies (recharts, xlsx) kuruldu; types/database.ts yenilenerek 3 yeni tablo (notifications, report_uploads, report_kurum_stats) ve lead_stage_enum yeni değerleri eklendi; report-upload.tsx TypeScript hataları düzeltildi. `npm run type-check` ✅ TEMIZ, `npm run build` ✅ BAŞARILI. Sistem şu an Faz 2 (PLAN_FOUNDATION_FAZ2.md) uygulanmaya hazır.
