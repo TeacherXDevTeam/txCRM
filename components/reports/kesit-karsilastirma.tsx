@@ -42,7 +42,7 @@ export function KesitKarsilastirma({
   const sirali = useMemo(() => {
     const k = [...kurumlar];
     k.sort((a, b) => {
-      const x = a[sirala], y = b[sirala];
+      const x = a[sirala] ?? -1, y = b[sirala] ?? -1;
       const s = typeof x === "string" || typeof y === "string"
         ? String(x).localeCompare(String(y), "tr")
         : (x as number) - (y as number);
@@ -88,15 +88,15 @@ export function KesitKarsilastirma({
               </th>
               <td className="border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums">{tr(k.ogretmenSayisi)}</td>
               <td className="border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums">{tr(k.subeSayisi)}</td>
-              <td className="border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums">{tr(k.egitimSayisi)}</td>
+              <td className="border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums">{k.egitimSayisi === null ? <span className="text-tx-gri">—</span> : tr(k.egitimSayisi)}</td>
               <td className={`border-b border-tx-cizgi px-2.5 py-2.5 text-right font-semibold tabular-nums ${skala(k.ilerlemeOrtalamasi / 100)}`}>
                 %{k.ilerlemeOrtalamasi.toFixed(1)}
               </td>
               <td className={`border-b border-tx-cizgi px-2.5 py-2.5 text-right font-semibold tabular-nums ${skala(k.tamamlanmaOrani / 100)}`}>
                 %{k.tamamlanmaOrani.toFixed(1)}
               </td>
-              <td className="border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums">{tr(k.sertifikaSayisi)}</td>
-              <td className="border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums">{tr(k.sertifikaAlan)}</td>
+              <td className="border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums">{k.sertifikaSayisi === null ? <span className="text-tx-gri">—</span> : tr(k.sertifikaSayisi)}</td>
+              <td className="border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums">{k.sertifikaAlan === null ? <span className="text-tx-gri">—</span> : tr(k.sertifikaAlan)}</td>
               <td className={`border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums ${skala(k.hicBaslamayan / Math.max(k.ogretmenSayisi, 1), true)}`}>
                 {tr(k.hicBaslamayan)}
                 <span className="ml-1 text-[10px] text-tx-gri">
@@ -120,8 +120,8 @@ export function KesitKarsilastirma({
             <td className="px-2.5 py-2.5 text-right text-tx-gri">—</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">%{agirlikli(kurumlar, "ilerlemeOrtalamasi").toFixed(1)}</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">%{agirlikli(kurumlar, "tamamlanmaOrani").toFixed(1)}</td>
-            <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + k.sertifikaSayisi, 0))}</td>
-            <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + k.sertifikaAlan, 0))}</td>
+            <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + (k.sertifikaSayisi ?? 0), 0))}</td>
+            <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + (k.sertifikaAlan ?? 0), 0))}</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + k.hicBaslamayan, 0))}</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + k.tumunuTamamlayan, 0))}</td>
           </tr>

@@ -7,7 +7,11 @@
 //
 // Tanımlar KULLANIM.md (kurum_raporu.py) ile birebir aynıdır.
 
-/** Excel'den okunan tek satır. Ad-soyad bilerek yok. */
+/**
+ * Detaylı döküm satırı — her satır bir öğretmen × eğitim.
+ * Sütunlar: Ad · Soyad · E-posta · Kurum · Şube · Eğitim · İlerleme (%) · Sertifika Tarihi
+ * Ad-soyad bilerek alınmaz.
+ */
 export interface HamSatir {
   eposta: string;
   kurum: string;
@@ -19,13 +23,34 @@ export interface HamSatir {
   sertifikaTarihi: string | null;
 }
 
+/**
+ * Özet döküm satırı — her satır bir öğretmen.
+ * Sütunlar: Adı Soyadı · E-posta · Kurum · Şube · Tamamlanan · Devam Eden · Tamamlama %
+ * Eğitim adı ve sertifika tarihi yok; bu yüzden eğitim kırılımı ve
+ * sertifika metrikleri üretilemez (ilgili alanlar null kalır).
+ */
+export interface OzetSatir {
+  eposta: string;
+  kurum: string;
+  sube: string;
+  tamamlanan: number;
+  devamEden: number;
+  /** 0..1 aralığında, platformun verdiği tamamlama yüzdesi */
+  yuzde: number;
+}
+
+/** Kesitin hangi dökümden üretildiği. */
+export type KesitKaynagi = "detayli" | "ozet";
+
 export interface KesitSube {
   subeAdi: string;
   ogretmenSayisi: number;
-  egitimSayisi: number;
+  /** Özet dökümde bilinmez */
+  egitimSayisi: number | null;
   ilerlemeOrtalamasi: number;  // %
   tamamlanmaOrani: number;     // %
-  sertifikaSayisi: number;
+  /** Özet dökümde bilinmez */
+  sertifikaSayisi: number | null;
   hicBaslamayan: number;
   devamEden: number;
   tumunuTamamlayan: number;
@@ -41,24 +66,30 @@ export interface KesitEgitim {
 }
 
 export interface KesitKurum {
+  kaynak: KesitKaynagi;
   kurumAdi: string;
   ogretmenSayisi: number;
   subeSayisi: number;
-  egitimSayisi: number;
+  /** Kaç FARKLI eğitim atandığı — özet dökümde bilinmez */
+  egitimSayisi: number | null;
+  /** Toplam öğretmen × eğitim kaydı */
   kayitSayisi: number;
   /** Öğretmen düzeyinde ilerleme ortalaması — kısmi ilerleme SAYILIR */
   ilerlemeOrtalamasi: number;
   /** Öğretmen düzeyinde tamamlanan ÷ atanan — kısmi SAYILMAZ */
   tamamlanmaOrani: number;
   tamamlananEgitim: number;
-  sertifikaSayisi: number;
-  sertifikaAlan: number;
+  /** Özet dökümde bilinmez */
+  sertifikaSayisi: number | null;
+  /** Özet dökümde bilinmez */
+  sertifikaAlan: number | null;
   hicBaslamayan: number;
   devamEden: number;
   tumunuTamamlayan: number;
   /** Atanan eğitim sayısı kurumun tipik değerinden farklı olan öğretmen adedi */
   esitsizAtama: number;
   subeler: KesitSube[];
+  /** Özet dökümde boş kalır */
   egitimler: KesitEgitim[];
   sertifikaAylik: { ay: string; adet: number }[];
 }
@@ -193,6 +224,7 @@ export function kesitUret(satirlar: HamSatir[], olcekDuzeltildi = false): Kesit 
     const tipikAtama = mod(atananSayilari);
 
     cikti.push({
+      kaynak: "detayli",
       kurumAdi,
       ogretmenSayisi: n,
       subeSayisi: tumSubeler.size,
@@ -239,5 +271,123 @@ export function kesitUret(satirlar: HamSatir[], olcekDuzeltildi = false): Kesit 
   return {
     kurumlar: cikti.sort((a, b) => a.kurumAdi.localeCompare(b.kurumAdi, "tr")),
     uyarilar: { epostasizSatir, birlestirilenMukerrer, olcekDuzeltildi },
+  };
+}
+
+/**
+ * Özet dökümden kesit üretir (satır = öğretmen).
+ *
+ * Detaylı dökümden farkı: eğitim adı ve sertifika tarihi olmadığı için
+ * `egitimSayisi`, `sertifikaSayisi`, `sertifikaAlan` null kalır; `egitimler`
+ * ve `sertifikaAylik` boş döner. Ekran bu alanları "—" gösterir, uydurmaz.
+ *
+ * Ortalamalar yine öğretmen düzeyinden alınır:
+ * - ilerlemeOrtalamasi: platformun verdiği Tamamlama %'lerinin ortalaması
+ * - tamamlanmaOrani: her öğretmenin tamamladığı ÷ atananının ortalaması
+ */
+export function kesitUretOzet(satirlar: OzetSatir[]): Kesit {
+  let epostasizSatir = 0;
+  let birlestirilenMukerrer = 0;
+
+  const kurumlar = new Map<string, Map<string, OzetSatir>>();
+  for (const s of satirlar) {
+    const eposta = s.eposta.trim().toLowerCase();
+    if (!eposta) { epostasizSatir++; continue; }
+    const kurum = s.kurum.trim() || "—";
+    if (!kurumlar.has(kurum)) kurumlar.set(kurum, new Map());
+    const kisiler = kurumlar.get(kurum)!;
+    const onceki = kisiler.get(eposta);
+    if (!onceki) { kisiler.set(eposta, { ...s, eposta }); continue; }
+
+    // Aynı öğretmen iki kez: adetler toplanır, yüzde kayıt sayısına göre ağırlıklanır
+    birlestirilenMukerrer++;
+    const wOnce = onceki.tamamlanan + onceki.devamEden;
+    const wYeni = s.tamamlanan + s.devamEden;
+    const wTop = wOnce + wYeni;
+    onceki.tamamlanan += s.tamamlanan;
+    onceki.devamEden += s.devamEden;
+    onceki.yuzde = wTop > 0
+      ? (onceki.yuzde * wOnce + s.yuzde * wYeni) / wTop
+      : (onceki.yuzde + s.yuzde) / 2;
+    if (!onceki.sube && s.sube) onceki.sube = s.sube;
+  }
+
+  const cikti: KesitKurum[] = [];
+
+  for (const [kurumAdi, kisiler] of kurumlar) {
+    const tumSubeler = new Set<string>();
+    let kayitSayisi = 0, tamamlananEgitim = 0;
+    let hicBaslamayan = 0, devamEdenSayisi = 0, tumunuTamamlayan = 0;
+    let ilerlemeToplam = 0, oranToplam = 0;
+    const atananSayilari: number[] = [];
+
+    type SubeAcc = { kisi: number; ilerleme: number; oran: number;
+                     hic: number; devam: number; tum: number };
+    const subeAcc = new Map<string, SubeAcc>();
+
+    for (const [, k] of kisiler) {
+      const atanan = k.tamamlanan + k.devamEden;
+      const kisiOran = atanan > 0 ? k.tamamlanan / atanan : 0;
+
+      kayitSayisi += atanan;
+      tamamlananEgitim += k.tamamlanan;
+      ilerlemeToplam += k.yuzde;
+      oranToplam += kisiOran;
+      atananSayilari.push(atanan);
+
+      const hicBaslamadi = k.tamamlanan === 0 && k.yuzde <= 0;
+      const hepsiBitti = k.yuzde >= 1 || (atanan > 0 && k.devamEden === 0 && k.tamamlanan > 0);
+      if (hicBaslamadi) hicBaslamayan++;
+      else if (hepsiBitti) tumunuTamamlayan++;
+      else devamEdenSayisi++;
+
+      const subeAdi = k.sube.trim() || "Şube bilgisi eksik";
+      tumSubeler.add(subeAdi);
+      const sa = subeAcc.get(subeAdi) ?? { kisi: 0, ilerleme: 0, oran: 0, hic: 0, devam: 0, tum: 0 };
+      sa.kisi++; sa.ilerleme += k.yuzde; sa.oran += kisiOran;
+      if (hicBaslamadi) sa.hic++; else if (hepsiBitti) sa.tum++; else sa.devam++;
+      subeAcc.set(subeAdi, sa);
+    }
+
+    const n = kisiler.size;
+    const tipikAtama = mod(atananSayilari);
+
+    cikti.push({
+      kaynak: "ozet",
+      kurumAdi,
+      ogretmenSayisi: n,
+      subeSayisi: tumSubeler.size,
+      egitimSayisi: null,          // eğitim adı yok
+      kayitSayisi,
+      ilerlemeOrtalamasi: n ? yuzde(ilerlemeToplam / n) : 0,
+      tamamlanmaOrani: n ? yuzde(oranToplam / n) : 0,
+      tamamlananEgitim,
+      sertifikaSayisi: null,       // sertifika tarihi yok
+      sertifikaAlan: null,
+      hicBaslamayan,
+      devamEden: devamEdenSayisi,
+      tumunuTamamlayan,
+      esitsizAtama: atananSayilari.filter((a) => a !== tipikAtama).length,
+      subeler: [...subeAcc.entries()]
+        .map(([subeAdi, v]) => ({
+          subeAdi,
+          ogretmenSayisi: v.kisi,
+          egitimSayisi: null,
+          ilerlemeOrtalamasi: yuzde(v.ilerleme / v.kisi),
+          tamamlanmaOrani: yuzde(v.oran / v.kisi),
+          sertifikaSayisi: null,
+          hicBaslamayan: v.hic,
+          devamEden: v.devam,
+          tumunuTamamlayan: v.tum,
+        }))
+        .sort((a, b) => b.ilerlemeOrtalamasi - a.ilerlemeOrtalamasi),
+      egitimler: [],
+      sertifikaAylik: [],
+    });
+  }
+
+  return {
+    kurumlar: cikti.sort((a, b) => a.kurumAdi.localeCompare(b.kurumAdi, "tr")),
+    uyarilar: { epostasizSatir, birlestirilenMukerrer, olcekDuzeltildi: false },
   };
 }

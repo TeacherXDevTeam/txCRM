@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-08
 
+### Son İşlem — Kurum Takip: iki döküm formatı (2026-09-08)
+Kullanıcı platformdan hem detaylı (Eğitim sütunlu) hem özet (Tamamlanan/Devam Eden sütunlu) döküm alabildiğini belirtti. Kesit modeli ikisini de kabul edecek şekilde genişletildi; format sütun başlıklarından otomatik anlaşılıyor, kullanıcı bir şey seçmiyor. Özet dökümde üretilemeyen alanlar (`egitimSayisi`, `sertifikaSayisi`, `sertifikaAlan`) tip düzeyinde `number | null` — ekranda "—" gösteriliyor, sıfır uydurulmuyor. Her iki format Node'da test edildi: detaylı döküm GEN Koleji'nde Excel'le birebir, özet döküm sentetik veriyle çalışıyor, ikisinin de çıktısında kişisel veri yok.
+
 ### Son İşlem — Kurum Takip: Adım 1 + Kurum Karşılaştırma (2026-09-08)
 Kesit hesaplama katmanı (`kesit.ts`) ve Excel okuyucu (`kesit-parse.ts`) yazıldı; Raporlar'a "Kurum Takip" sekmesi eklendi (Kurum Karşılaştırma tablosu + kurum detay raporu). Kişisel veri tip düzeyinde dışarıda: `HamSatir`'da ad-soyad yok, çıktı tiplerinde kişiye ait tek alan yok — 8.294 satırlık girdi 9 KB'lık sayı özetine iniyor, içinde tek `@` bile yok. Kaynak Excel'in kendi hesapladığı 30 değerle karşılaştırıldı: 29'u birebir, 1'i (BİLNET tamamlanma oranı, %78,93 vs %78,96) planda öngörülen öğretmen-düzeyi/satır-düzeyi farkı — atama eşitsizliği olan tek kurum orası. Parser tüm sayfaları tarıyor (takip panosunda "Ham Veri" 9. sayfa). **Kaydetme henüz yok** — Adım 2 (şema) bekliyor.
 

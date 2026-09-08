@@ -214,11 +214,20 @@ Eski `report_uploads` / `report_kurum_stats` tabloları ve onlara bağlı kod ka
 
 ---
 
-## 4. Öğretmen Özeti sekmesi ne olacak
+## 4. İki döküm formatı da kabul edilir
 
-İkinci Excel formatı (`Adı Soyadı · Tamamlanan · Devam Eden · Tamamlama %`) aynı kesit yapısına yazar, ama eğitim adı ve sertifika bilgisi içermediği için `report_egitim` ve `report_sertifika_ay` boş kalır, `sertifika_sayisi` ve `egitim_sayisi` NULL olur.
+Platformdan iki ayrı döküm alınabiliyor; kesit modeli ikisini de aynı yapıya yazar. Yüklenen dosyanın hangisi olduğu **sütun başlıklarından otomatik anlaşılır**; kullanıcının bir şey seçmesi gerekmez.
 
-Ekranda bu kesitler "eğitim kırılımı yok" notuyla gösterilir. Aynı gün her iki format da yüklenirse kurs-bazlı olan kazanır (daha zengin).
+| Format | Sütunlar | Üretilebilenler |
+|---|---|---|
+| **Detaylı** (satır = öğretmen × eğitim) | `Ad · Soyad · E-posta · Kurum · Şube · Eğitim · İlerleme (%) · Sertifika Tarihi` | Hepsi |
+| **Özet** (satır = öğretmen) | `Adı Soyadı · E-posta · Kurum · Şube · Tamamlanan · Devam Eden · Tamamlama %` | Eğitim kırılımı, sertifika metrikleri ve kümülatif eğri **hariç** hepsi |
+
+Üretilemeyen alanlar `null` olarak saklanır ve ekranda **"—"** gösterilir; sıfır yazılmaz, uydurulmaz. Kurum detayında sebebi açıklayan bir not çıkar.
+
+Aynı sayfada her iki formatın sütunları da varsa detaylı olan seçilir (daha zengin). Aynı kesit tarihine iki farklı format yüklenirse ikincisi birincinin üzerine yazar.
+
+Dosya tek bir sayfadan da ibaret olabilir, çok sayfalı bir çalışma kitabı da olabilir: **gerekli sütunları taşıyan ilk sayfa** bulunup kullanılır (takip panosunda "Ham Veri" dokuzuncu sayfadır).
 
 ---
 

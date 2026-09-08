@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { Upload, FileSpreadsheet, X, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { excelOku, BEKLENEN_SUTUNLAR } from "./kesit-parse";
-import { kesitUret, type Kesit, type KesitKurum } from "./kesit";
+import { excelOku, SUTUNLAR_DETAYLI, SUTUNLAR_OZET } from "./kesit-parse";
+import { kesitUret, kesitUretOzet, type Kesit, type KesitKurum } from "./kesit";
 import { KesitKarsilastirma } from "./kesit-karsilastirma";
 import { YazdirButonu } from "./print-button";
 import {
@@ -34,7 +34,9 @@ export function KesitPanosu() {
     reader.onload = (ev) => {
       try {
         const sonuc = excelOku(ev.target?.result as ArrayBuffer);
-        const k = kesitUret(sonuc.satirlar, sonuc.olcekDuzeltildi);
+        const k = sonuc.tip === "detayli"
+          ? kesitUret(sonuc.satirlar, sonuc.olcekDuzeltildi)
+          : kesitUretOzet(sonuc.satirlar);
         k.uyarilar.epostasizSatir = sonuc.epostasiz;
         setKaynakSatir(sonuc.kaynakSatir);
         setKesit(k);
@@ -69,7 +71,8 @@ export function KesitPanosu() {
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-tx-cizgi py-8 text-center hover:border-tx-kirmizi">
             <FileSpreadsheet className="h-8 w-8 text-tx-cizgi" />
             <span className="text-sm text-tx-metin">.xlsx dosyasını seç — tüm kurumlar alt alta olabilir</span>
-            <span className="text-xs text-tx-gri">Sütunlar: {BEKLENEN_SUTUNLAR}</span>
+            <span className="text-xs text-tx-gri">Detaylı: {SUTUNLAR_DETAYLI}</span>
+            <span className="text-xs text-tx-gri">Özet: {SUTUNLAR_OZET}</span>
             <span className="text-xs text-tx-gri">
               Dosya tarayıcıda işlenir. Kaydedilecek olan yalnızca kurum/şube/eğitim düzeyindeki
               sayılardır — ad, e-posta ve kişi bazlı ilerleme hiçbir yere yazılmaz.
@@ -83,6 +86,11 @@ export function KesitPanosu() {
               <p className="text-tx-gri">
                 {tr(kaynakSatir)} satır · {kesit.kurumlar.length} kurum ·{" "}
                 {tr(kesit.kurumlar.reduce((a, k) => a + k.ogretmenSayisi, 0))} öğretmen
+              </p>
+              <p className="mt-0.5 text-[11px] text-tx-gri">
+                {kesit.kurumlar[0]?.kaynak === "ozet"
+                  ? "Özet döküm — eğitim kırılımı ve sertifika bilgisi yok"
+                  : "Detaylı döküm — eğitim kırılımı ve sertifika dahil"}
               </p>
             </div>
             <div className="flex items-end gap-3">
@@ -192,7 +200,7 @@ export function KurumDetay({ kurum: k, tarih, onGeri }: { kurum: KesitKurum; tar
             <>
               <b className="font-medium text-tx-metin">{tr(k.ogretmenSayisi)}</b> öğretmen ·{" "}
               <b className="font-medium text-tx-metin">{tr(k.subeSayisi)}</b> şube ·{" "}
-              <b className="font-medium text-tx-metin">{tr(k.egitimSayisi)}</b> atanan eğitim
+<b className="font-medium text-tx-metin">{k.egitimSayisi === null ? "—" : tr(k.egitimSayisi)}</b> atanan eğitim
             </>
           }
         />
@@ -200,7 +208,7 @@ export function KurumDetay({ kurum: k, tarih, onGeri }: { kurum: KesitKurum; tar
         <main className="mx-auto max-w-[900px] px-7 pb-16 pt-10">
           <Pano>
             <Kpi etiket="Öğretmen sayısı" deger={tr(k.ogretmenSayisi)} />
-            <Kpi etiket="Atanan eğitim sayısı" deger={tr(k.egitimSayisi)} alt={`${tr(k.kayitSayisi)} kayıt`} />
+            <Kpi etiket="Atanan eğitim sayısı" deger={k.egitimSayisi === null ? "—" : tr(k.egitimSayisi)} alt={`${tr(k.kayitSayisi)} kayıt`} />
             <Kpi etiket="İlerleme ortalaması" deger={`%${k.ilerlemeOrtalamasi.toFixed(1)}`} alt="kısmi ilerleme sayılır" vurgu />
             <Kpi etiket="Tamamlanma oranı" deger={`%${k.tamamlanmaOrani.toFixed(1)}`} alt={`${tr(k.tamamlananEgitim)} eğitim bitti`} />
           </Pano>
@@ -250,6 +258,7 @@ export function KurumDetay({ kurum: k, tarih, onGeri }: { kurum: KesitKurum; tar
             </Tablo>
           </Bolum>
 
+          {k.egitimler.length > 0 && (
           <Bolum baslik="Eğitimler" aciklama="Eğitim bazında tamamlanma oranı — en düşük üstte.">
             <Tablo basliklar={["Eğitim", "Atanan", "Tamamlayan", "Hiç Başlamayan", "", "Oran"]}>
               {k.egitimler.map((e) => (
@@ -264,6 +273,15 @@ export function KurumDetay({ kurum: k, tarih, onGeri }: { kurum: KesitKurum; tar
               ))}
             </Tablo>
           </Bolum>
+          )}
+
+          {k.kaynak === "ozet" && (
+            <p className="mb-11 rounded border-l-[3px] border-tx-cizgi bg-white px-4 py-3 text-[12.5px] text-tx-gri">
+              Bu kesit <b className="text-tx-metin">özet dökümden</b> üretildi. Eğitim adı ve sertifika
+              tarihi içermediği için eğitim kırılımı, sertifika sayıları ve kümülatif sertifika eğrisi
+              çıkarılamıyor. Bunlar için detaylı dökümü yükleyin.
+            </p>
+          )}
 
           {kumulatif.length > 1 && (
             <Bolum baslik="Kümülatif sertifika" aciklama="Sertifika tarihlerinden türetildi; kayıt tutmaya başlamadan önceki geçmişi de gösterir.">
