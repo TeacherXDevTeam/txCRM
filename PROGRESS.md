@@ -54,6 +54,12 @@
 - PDF çıktısı: `window.print()` + `@media print` (ek bağımlılık yok)
 - Migration `20260908000000_rapor_format_ayrimi.sql` — `report_uploads.format`
 
+### Raporlar — TeacherX Rapor Kimliği (2026-09-08) ✅
+- Görünüm `kurum_raporu.py` örnek çıktılarına hizalandı; marka paleti + Poppins/Inter
+- Grafikler saf SVG/CSS (`components/reports/brand.tsx`) — recharts kaldırıldı, sayfa 236 kB → 124 kB
+- **İki ayrı PDF:** Kurum Raporu (isimsiz, kayıtlı özetten) · Öğretmen Listesi (isimli, yalnız oturum belleğinden)
+- Gizlilik kuralı: `KULLANIM.md` — ikisi asla aynı çıktıya basılmaz
+
 ## Devam Eden
 
 _Yok._

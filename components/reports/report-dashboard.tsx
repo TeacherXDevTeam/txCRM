@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  PieChart, Pie, Cell, Legend,
-} from "recharts";
 import { Select } from "@/components/ui/select";
+import { YazdirButonu } from "./print-button";
 import type { KurumStats } from "./report-client";
+import {
+  UstSerit, RaporBasligi, Bolum, Pano, Kpi, Halka, YatayBarlar,
+  DagilimGrafigi, Tablo, OranBari, Dipnot, tr,
+} from "./brand";
 
 interface KurumEntry { kurum: string; teacher_count: number; stats: KurumStats }
 interface Props {
@@ -16,7 +17,6 @@ interface Props {
 }
 
 const normKurum = (s: string) => s.toLowerCase().trim();
-const COLORS = ["#22c55e", "#eab308", "#ef4444"];
 
 export function ReportDashboard({ kurumStats, expectedByKurum, uploadInfo }: Props) {
   const kurumlar = useMemo(
@@ -27,143 +27,164 @@ export function ReportDashboard({ kurumStats, expectedByKurum, uploadInfo }: Pro
 
   const entry = kurumStats.find((k) => k.kurum === kurum);
   const s = entry?.stats;
-
   if (!s) return null;
 
   const expected = expectedByKurum[normKurum(kurum)] ?? null;
   const coverage = expected ? Math.round((s.teacherCount / expected) * 100) : null;
 
-  const donut = [
-    { name: "Tamamlanan", value: s.totalCompleted },
-    { name: "Devam Eden", value: s.totalInProgress },
-    { name: "Başlamayan", value: s.totalNotStarted },
-  ];
+  // Eski yüklemelerde gruplar alanı yok → eldeki sayılardan türet
+  const gruplar = s.gruplar ?? {
+    hicBaslamayan: 0,
+    devamEden: Math.max(0, s.teacherCount - s.fullyCompleted),
+    tumunuTamamlayan: s.fullyCompleted,
+  };
+  const yuzde = (n: number) => (s.teacherCount ? Math.round((n / s.teacherCount) * 100) : 0);
+  const tarih = new Date(uploadInfo?.uploaded_at ?? Date.now()).toLocaleDateString("tr-TR");
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="w-80">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Kurum ({kurumlar.length})</label>
-          <Select value={kurum} onChange={(e) => setKurum(e.target.value)}>
-            {kurumlar.map((kk) => <option key={kk} value={kk}>{kk}</option>)}
-          </Select>
+    <div className="overflow-hidden rounded-lg border border-tx-cizgi bg-tx-kagit font-govde text-tx-metin print:rounded-none print:border-0">
+      <div className="yalniz-kurum">
+      <UstSerit tarih={tarih} />
+      <RaporBasligi
+        kurum={kurum}
+        altBaslik="TeacherX Eğitim Tamamlama Raporu"
+        meta={
+          <>
+            <b className="font-medium text-tx-metin">{tr(s.teacherCount)}</b> öğretmen ·{" "}
+            <b className="font-medium text-tx-metin">{tr(s.subeler.length)}</b> şube ·{" "}
+            <b className="font-medium text-tx-metin">{tr(s.courseCount)}</b> atanan eğitim
+          </>
+        }
+      />
+
+      <div className="ic-arac mx-auto max-w-[900px] px-7 pt-5">
+        <div className="flex flex-wrap items-end justify-between gap-3 rounded border border-tx-cizgi bg-white px-4 py-3">
+          <div className="w-72">
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-tx-kirmizi">
+              Kurum ({kurumlar.length})
+            </label>
+            <Select value={kurum} onChange={(e) => setKurum(e.target.value)}>
+              {kurumlar.map((kk) => <option key={kk} value={kk}>{kk}</option>)}
+            </Select>
+          </div>
+          <YazdirButonu mod="kurum" etiket="Kurum Raporu (PDF)" />
         </div>
         {uploadInfo && (
-          <p className="text-xs text-gray-400">
-            {uploadInfo.dosya_adi} · {new Date(uploadInfo.uploaded_at).toLocaleString("tr-TR")} · {uploadInfo.satir_sayisi.toLocaleString("tr-TR")} kayıt
+          <p className="mt-2 text-[11.5px] text-tx-gri">
+            Kaynak: {uploadInfo.dosya_adi} · {new Date(uploadInfo.uploaded_at).toLocaleString("tr-TR")} ·{" "}
+            {tr(uploadInfo.satir_sayisi)} kayıt
           </p>
         )}
       </div>
 
-      {/* KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Kpi label="Öğretmen" value={s.teacherCount} />
-        <Kpi label="Kurs Sayısı" value={s.courseCount} />
-        <Kpi label="Ort. Tamamlama" value={`%${s.avgCompletion}`} />
-        <Kpi label="Tümünü Bitiren" value={`${s.fullyCompleted} (${s.teacherCount ? Math.round((s.fullyCompleted / s.teacherCount) * 100) : 0}%)`} accent="green" />
-        <Kpi label="Sözleşme Kapsamı" value={expected ? `${s.teacherCount}/${expected} (%${coverage})` : "—"} accent={coverage !== null && coverage < 90 ? "red" : "blue"} />
-      </div>
+      <main className="mx-auto max-w-[900px] px-7 pb-16 pt-10">
+        <Pano>
+          <Kpi etiket="Öğretmen sayısı" deger={tr(s.teacherCount)} />
+          <Kpi etiket="Atanan eğitim sayısı" deger={tr(s.courseCount)} />
+          <Kpi etiket="Kurum genel ortalaması" deger={`%${s.avgCompletion}`} vurgu />
+          <Kpi etiket="Sertifika alan öğretmen" deger={tr(s.certCount)} alt="tamamlanan eğitim başına" />
+        </Pano>
+        <Pano sutun={3}>
+          <Kpi etiket="Hiç başlamayan öğretmen" deger={tr(gruplar.hicBaslamayan)} alt={`öğretmenlerin %${yuzde(gruplar.hicBaslamayan)}'i`} vurgu={gruplar.hicBaslamayan > 0} />
+          <Kpi etiket="Devam eden öğretmen" deger={tr(gruplar.devamEden)} alt={`öğretmenlerin %${yuzde(gruplar.devamEden)}'i`} />
+          <Kpi etiket="Tümünü tamamlayan öğretmen" deger={tr(gruplar.tumunuTamamlayan)} alt={`öğretmenlerin %${yuzde(gruplar.tumunuTamamlayan)}'i`} />
+        </Pano>
 
-      {/* Sözleşme karşılaştırma */}
-      {expected !== null ? (
-        <div className={`rounded-lg border px-4 py-3 text-sm ${s.teacherCount >= expected ? "border-green-200 bg-green-50 text-green-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
-          Sözleşmeye göre <b>{expected}</b> öğretmen olmalı, raporda <b>{s.teacherCount}</b> var
-          {s.teacherCount < expected ? <> → <b>{expected - s.teacherCount}</b> eksik (%{coverage} kapsama).</> : <> → hedef karşılanıyor (%{coverage}).</>}
+        <div className="mt-6">
+          <Halka
+            ortaDeger={tr(s.teacherCount)}
+            ortaEtiket="öğretmen"
+            dilimler={[
+              { ad: "Hiç başlamamış", deger: gruplar.hicBaslamayan, renk: "#101010" },
+              { ad: "Devam ediyor", deger: gruplar.devamEden, renk: "#C9C5BE" },
+              { ad: "Tümünü tamamlamış", deger: gruplar.tumunuTamamlayan, renk: "#E70917" },
+            ]}
+          />
         </div>
-      ) : (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
-          Bu kurum için sözleşmede &quot;olması gereken öğretmen sayısı&quot; tanımlı değil (kurum adı eşleşmedi). Sözleşmeler&apos;den eklenince karşılaştırma çıkar.
-        </div>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card title="Şube Bazında Ortalama Tamamlama %">
-          <ResponsiveContainer width="100%" height={Math.max(220, s.subeler.length * 26)}>
-            <BarChart data={s.subeler} layout="vertical" margin={{ left: 10, right: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="sube" width={140} tick={{ fontSize: 10 }} />
-              <Tooltip />
-              <Bar dataKey="ort" name="Ort. %" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+        <div className="h-11" />
 
-        <Card title="Kurs Bazında Tamamlama % (en düşük üstte)">
-          <ResponsiveContainer width="100%" height={Math.max(220, s.kurslar.length * 26)}>
-            <BarChart data={s.kurslar} layout="vertical" margin={{ left: 10, right: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="kurs" width={160} tick={{ fontSize: 9 }} />
-              <Tooltip />
-              <Bar dataKey="oran" name="Tamamlama %" fill="#a855f7" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+        <Bolum baslik="Kaç eğitim tamamlandı"
+               aciklama="Öğretmenlerin kaçının kaç eğitim bitirdiği. Sağdaki sütun tamamı bitirenleri gösterir.">
+          <DagilimGrafigi sutunlar={s.buckets.map((b) => ({ etiket: `${b.aralik} eğitim`, deger: b.sayi }))} />
+        </Bolum>
 
-        <Card title="Öğretmen Başına Tamamlanan Kurs Dağılımı">
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={s.buckets} margin={{ left: -20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="aralik" tick={{ fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="sayi" name="Öğretmen" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card title="Kurs Kayıtları (durum dağılımı)">
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie data={donut} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={2}>
-                {donut.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-          <p className="mt-2 text-center text-xs text-gray-400">{s.certCount.toLocaleString("tr-TR")} sertifika alındı</p>
-        </Card>
-      </div>
-
-      {/* Risk listesi */}
-      <Card title={`Risk Listesi (tamamlama < %50) — ${s.risk.length}`}>
-        {s.risk.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-400">Düşük tamamlamalı öğretmen yok 🎉</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-            {s.risk.map((r, i) => (
-              <div key={i} className="flex items-center justify-between border-b border-gray-100 py-1.5 text-sm">
-                <span>{r.ad}</span>
-                <span className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">{r.sube}</span>
-                  <span className="font-medium text-red-600">%{r.yuzde}</span>
-                </span>
-              </div>
+        <Bolum baslik="Şubeler"
+               aciklama="Şube ortalamaları. Kurum ortalaması, şube ortalamalarının ortalaması değildir; öğretmen düzeyinden hesaplanır.">
+          <YatayBarlar satirlar={s.subeler.map((b) => ({ ad: b.sube, oran: b.ort, deger: `%${b.ort}` }))} />
+          <Tablo basliklar={["Şube", "Öğretmen", "Ortalama", "Tümünü bitiren"]}>
+            {s.subeler.map((b) => (
+              <tr key={b.sube}>
+                <th className="border-b border-tx-cizgi py-3 pr-2.5 text-left font-medium">{b.sube}</th>
+                <td className="border-b border-tx-cizgi py-3 pr-2.5 text-right tabular-nums">{tr(b.ogretmen)}</td>
+                <td className={`border-b border-tx-cizgi py-3 pr-2.5 text-right font-semibold tabular-nums ${b.ort < 50 ? "text-tx-kirmizi" : ""}`}>%{b.ort}</td>
+                <td className="border-b border-tx-cizgi py-3 text-right tabular-nums">%{b.tamRate}</td>
+              </tr>
             ))}
+          </Tablo>
+        </Bolum>
+
+        <Bolum baslik="Eğitimler"
+               aciklama="Eğitim bazında tamamlanma oranı — en düşük üstte.">
+          <Tablo basliklar={["Eğitim", "Atanan", "Tamamlayan", "", "Oran"]}>
+            {s.kurslar.map((k) => (
+              <tr key={k.kurs}>
+                <th className="border-b border-tx-cizgi py-3 pr-2.5 text-left font-medium">{k.kurs || "—"}</th>
+                <td className="border-b border-tx-cizgi py-3 pr-2.5 text-right tabular-nums">{tr(k.atanan)}</td>
+                <td className="border-b border-tx-cizgi py-3 pr-2.5 text-right tabular-nums">{tr(k.tamamlayan)}</td>
+                <td className="w-[30%] border-b border-tx-cizgi py-3 pr-2.5"><OranBari oran={k.oran} /></td>
+                <td className={`border-b border-tx-cizgi py-3 text-right font-semibold tabular-nums ${k.oran < 50 ? "text-tx-kirmizi" : ""}`}>%{k.oran}</td>
+              </tr>
+            ))}
+          </Tablo>
+        </Bolum>
+
+        <Dipnot>
+          Bu rapor {tarih} tarihli TeacherX platform dökümünden üretilmiştir. Toplulaştırılmıştır;
+          öğretmen adı, e-posta veya kişi bazlı performans bilgisi içermez. Kurum genel ortalaması
+          öğretmen düzeyinden hesaplanır.
+        </Dipnot>
+
+        <div className="ic-arac mt-10 space-y-4">
+          {expected !== null ? (
+            <div className={`rounded border-l-[3px] bg-white px-4 py-3 text-sm ${s.teacherCount >= expected ? "border-tx-siyah" : "border-tx-kirmizi"}`}>
+              Sözleşmeye göre <b>{tr(expected)}</b> öğretmen olmalı, raporda <b>{tr(s.teacherCount)}</b> var
+              {s.teacherCount < expected
+                ? <> → <b>{tr(expected - s.teacherCount)}</b> öğretmen eksik (%{coverage} kapsama).</>
+                : <> → hedef karşılanıyor (%{coverage}).</>}
+            </div>
+          ) : (
+            <div className="rounded border border-tx-cizgi bg-white px-4 py-3 text-sm text-tx-gri">
+              Bu kurum için sözleşmede &quot;olması gereken öğretmen sayısı&quot; tanımlı değil (kurum adı eşleşmedi).
+            </div>
+          )}
+
+          <div className="rounded border border-tx-cizgi bg-white p-4">
+            <h3 className="mb-1 font-baslik text-sm font-semibold">
+              Risk listesi (tamamlama &lt; %50) — {s.risk.length} öğretmen
+            </h3>
+            <p className="mb-3 text-[11.5px] text-tx-gri">
+              İç kullanım. Bu bölüm kurum raporu çıktısına <b>girmez</b>.
+            </p>
+            {s.risk.length === 0 ? (
+              <p className="py-3 text-center text-sm text-tx-gri">Düşük tamamlamalı öğretmen yok.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+                {s.risk.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 border-b border-tx-cizgi py-1.5 text-sm">
+                    <span className="truncate">{r.ad}</span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      {r.sube && <span className="text-xs text-tx-gri">{r.sube}</span>}
+                      <span className="w-10 text-right font-semibold tabular-nums text-tx-kirmizi">%{r.yuzde}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </Card>
-    </div>
-  );
-}
-
-function Kpi({ label, value, accent = "blue" }: { label: string; value: string | number; accent?: "blue" | "green" | "red" }) {
-  const color = accent === "green" ? "text-green-600" : accent === "red" ? "text-red-600" : "text-gray-900";
-  return (
-    <div className="rounded-lg border bg-white px-4 py-3">
-      <p className="text-xs text-gray-400">{label}</p>
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
-    </div>
-  );
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border bg-white p-4">
-      <h3 className="mb-3 text-sm font-semibold text-gray-700">{title}</h3>
-      {children}
+        </div>
+      </main>
+      </div>
     </div>
   );
 }

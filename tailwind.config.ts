@@ -14,7 +14,23 @@ const config: Config = {
       screens: { "2xl": "1400px" },
     },
     extend: {
+      fontFamily: {
+        // Marka rehberi: başlık Poppins, gövde Inter
+        baslik: ["var(--font-poppins)", "Poppins", "Segoe UI", "system-ui", "sans-serif"],
+        govde: ["var(--font-inter)", "Inter", "Segoe UI", "system-ui", "sans-serif"],
+      },
       colors: {
+        // TeacherX marka paleti (assets/TeacherX_Marka_Rehberi.pdf)
+        tx: {
+          kirmizi: "#E70917",  // vurgu — kicker, CTA, ince çizgi, öne çıkan rakam
+          bordo:   "#7A1810",
+          siyah:   "#101010",
+          kagit:   "#F4F2EE",  // açık bölüm zemini
+          metin:   "#2A2A2A",
+          gri:     "#6B6B6B",
+          cizgi:   "#DFDCD6",
+          dolgu:   "#E9E5DF",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

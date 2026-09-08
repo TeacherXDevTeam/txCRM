@@ -8,7 +8,7 @@ import { TeacherReportUpload } from "./teacher-report-upload";
 import { TeacherReportDashboard } from "./teacher-report-dashboard";
 import { ClearUploadButton } from "./clear-upload-button";
 import type { KurumStats } from "./report-client";
-import type { TeacherKurumStats } from "./teacher-report-client";
+import type { TeacherKurumStats, TeacherRow } from "./teacher-report-client";
 
 export type ReportFormat = "ogretmen" | "kurs";
 
@@ -32,6 +32,9 @@ const TABS: { key: ReportFormat; label: string; hint: string; icon: typeof Users
 ];
 
 export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }: Props) {
+  // Bu oturumda yüklenen ham öğretmen satırları — yalnızca "Öğretmen Listesi"
+  // çıktısı için bellekte tutulur, hiçbir zaman kaydedilmez.
+  const [oturumSatirlari, setOturumSatirlari] = useState<TeacherRow[]>([]);
   // Hangi sekmede daha yeni yükleme varsa onunla aç
   const [tab, setTab] = useState<ReportFormat>(() => {
     const t = teacher.upload?.uploaded_at;
@@ -46,7 +49,7 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
   return (
     <div className="space-y-5">
       {/* Sekme çubuğu — çıktıda gizli */}
-      <div className="flex items-end justify-between gap-4 border-b border-gray-200 print:hidden">
+      <div className="ic-arac flex items-end justify-between gap-4 border-b border-tx-cizgi">
         <div className="flex gap-1">
           {TABS.map((t) => {
             const Icon = t.icon;
@@ -57,16 +60,16 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 title={t.hint}
-                className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-2.5 font-baslik text-sm font-medium transition-colors ${
                   isActive
-                    ? "border-blue-600 text-blue-700"
-                    : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
+                    ? "border-tx-kirmizi text-tx-metin"
+                    : "border-transparent text-tx-gri hover:border-tx-cizgi hover:text-tx-metin"
                 }`}
               >
                 <Icon className="h-4 w-4" />
                 {t.label}
                 {count > 0 && (
-                  <span className={`rounded-full px-1.5 py-0.5 text-[11px] tabular-nums ${isActive ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[11px] tabular-nums ${isActive ? "bg-tx-kirmizi text-white" : "bg-tx-dolgu text-tx-gri"}`}>
                     {count}
                   </span>
                 )}
@@ -87,7 +90,7 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
 
       {tab === "ogretmen" ? (
         <>
-          <TeacherReportUpload currentUserId={currentUserId} />
+          <TeacherReportUpload currentUserId={currentUserId} onYuklendi={setOturumSatirlari} />
           {teacher.kurumStats.length === 0 ? (
             <EmptyState text="Henüz öğretmen özeti raporu yüklenmedi. Yukarıdan bir Excel dosyası seçin." />
           ) : (
@@ -95,6 +98,7 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
               kurumStats={teacher.kurumStats}
               expectedByKurum={expectedByKurum}
               uploadInfo={teacher.upload}
+              oturumSatirlari={oturumSatirlari}
             />
           )}
         </>
@@ -118,7 +122,7 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-xl border border-dashed py-12 text-center text-sm text-gray-400 print:hidden">
+    <div className="ic-arac rounded-lg border border-dashed border-tx-cizgi bg-white py-12 text-center text-sm text-tx-gri">
       {text}
     </div>
   );

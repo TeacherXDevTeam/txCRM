@@ -25,7 +25,15 @@ export interface KursStat { kurs: string; atanan: number; tamamlayan: number; or
 export interface BucketStat { aralik: string; sayi: number }
 export interface RiskTeacher { ad: string; sube: string; yuzde: number }
 
+/** Örnek kurum raporundaki üç öğretmen grubu. */
+export interface Gruplar {
+  hicBaslamayan: number;      // hiçbir eğitiminde ilerleme kaydı yok
+  devamEden: number;          // en az birine başlamış, hepsini bitirmemiş
+  tumunuTamamlayan: number;   // atananların tamamını bitirmiş
+}
+
 export interface KurumStats {
+  gruplar: Gruplar;
   teacherCount: number;
   courseCount: number;
   enrollments: number;
@@ -72,6 +80,7 @@ export function computeStatsByKurum(
     }
 
     let fullyCompleted = 0;
+    let hicBaslamayan = 0;
     let pctSum = 0;
     const completedCounts: number[] = [];
     const risk: RiskTeacher[] = [];
@@ -83,6 +92,7 @@ export function computeStatsByKurum(
       pctSum += pct;
       completedCounts.push(completed);
       if (assigned > 0 && completed === assigned) fullyCompleted++;
+      if (trows.every((r) => r.ilerleme <= 0)) hicBaslamayan++;
       if (pct < 50) {
         const t = trows[0];
         risk.push({ ad: t.ad, sube: t.sube, yuzde: Math.round(pct) });
@@ -130,6 +140,11 @@ export function computeStatsByKurum(
       kurum,
       teacher_count: teacherCount,
       stats: {
+        gruplar: {
+          hicBaslamayan,
+          devamEden: Math.max(0, byTeacher.size - hicBaslamayan - fullyCompleted),
+          tumunuTamamlayan: fullyCompleted,
+        },
         teacherCount,
         courseCount: kursMap.size,
         enrollments: krows.length,

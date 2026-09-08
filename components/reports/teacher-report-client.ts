@@ -33,8 +33,16 @@ export interface TeacherRisk {
   devamEden: number;
 }
 
+/** Örnek kurum raporundaki üç öğretmen grubu. */
+export interface Gruplar {
+  hicBaslamayan: number;      // hiç ilerleme kaydı yok
+  devamEden: number;          // başlamış, hepsini bitirmemiş
+  tumunuTamamlayan: number;   // atananların tamamını bitirmiş
+}
+
 export interface TeacherKurumStats {
   format: "ogretmen";
+  gruplar: Gruplar;
   teacherCount: number;
   totalCompleted: number;      // Σ tamamlanan
   totalInProgress: number;     // Σ devam eden
@@ -119,6 +127,7 @@ export function computeTeacherStatsByKurum(
 
     let totalCompleted = 0, totalInProgress = 0, pctSum = 0;
     let fullyCompleted = 0, notStarted = 0, pctMismatch = 0;
+    let hicBaslamayan = 0;
     const pcts: number[] = [];
     const risk: TeacherRisk[] = [];
 
@@ -129,6 +138,10 @@ export function computeTeacherStatsByKurum(
       pcts.push(t.yuzde);
       if (t.yuzde >= 100) fullyCompleted++;
       if (t.tamamlanan === 0) notStarted++;
+      // "Hiç başlamamış": ne bitirmiş ne de ilerleme kaydetmiş.
+      // notStarted'dan farkı: bir kursa başlamış ama hiçbirini bitirmemiş
+      // öğretmen notStarted'a girer, bu gruba girmez.
+      if (t.tamamlanan === 0 && t.yuzde <= 0) hicBaslamayan++;
 
       // Platformun yüzdesi, adetlerden hesaplanana uyuyor mu?
       const kayit = t.tamamlanan + t.devamEden;
@@ -168,6 +181,11 @@ export function computeTeacherStatsByKurum(
       teacher_count: teacherCount,
       stats: {
         format: "ogretmen",
+        gruplar: {
+          hicBaslamayan,
+          devamEden: Math.max(0, teacherCount - hicBaslamayan - fullyCompleted),
+          tumunuTamamlayan: fullyCompleted,
+        },
         teacherCount,
         totalCompleted,
         totalInProgress,
