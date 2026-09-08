@@ -36,7 +36,7 @@
 | M7 Sözleşmeler | `/sozlesmeler` | sipariş kalemleri, bitiş uyarısı |
 | M8 Çalışma Grupları | `/calisma-gruplari` | split-layout: fazlar/üyeler/oturumlar |
 | M9 Ekip | `/ekip` | admin: rol + aktiflik yönetimi |
-| M10 Dashboard | `/dashboard`, `/raporlar` | metrik kartları; Excel yükleme + kurum bazlı rapor |
+| M10 Dashboard | `/dashboard`, `/raporlar` | metrik kartları; Excel yükleme (2 format: öğretmen özeti / kurs bazlı) + kurum bazlı rapor + PDF çıktısı |
 
 ### Platform Foundation — Faz 1 ✅
 - `notifications` tablosu (polymorphic, RLS `recipient_id = auth.uid()`, Realtime) + header zili
@@ -47,6 +47,12 @@
 - 61 kurum (26-27 takip listesi), 69 eğitim + 56 eğitmen katalogu, 180 okul→eğitim ataması
 - Dosyalar: `supabase/seed/*.sql` (gitignored, SQL Editor'den yüklenir)
 - `20260827000000_trainings_default_trainer.sql` — `trainings.default_trainer_id` (seed'in DDL'i kayda geçirildi)
+
+### Raporlar — İki Format (2026-09-08) ✅
+- `/raporlar` iki sekme: **Öğretmen Özeti** (Adı Soyadı · Tamamlanan · Devam Eden · Tamamlama %) ve **Kurs Bazlı** (Kurs · İlerleme Yüzdesi · Sertifika Tarihi)
+- Excel tarayıcıda işlenir; DB'ye yalnızca kurum bazlı sayısal özet gider (ham satır asla yazılmaz)
+- PDF çıktısı: `window.print()` + `@media print` (ek bağımlılık yok)
+- Migration `20260908000000_rapor_format_ayrimi.sql` — `report_uploads.format`
 
 ## Devam Eden
 
@@ -59,6 +65,7 @@ _Yok._
 | `types/database.ts` eksik | `notifications`, `report_uploads`, `report_kurum_stats`, `contracts.expected_teacher_count`, yeni `lead_stage_enum` değerleri generated types'ta yok | Faz 2 İş 1 |
 | 36 `any`/`as never` cast | Yukarıdaki tip eksikliğinin sonucu. Lint'te `warn` olarak izleniyor | Faz 2 İş 1 |
 | API route yok | Tüm mutation'lar tarayıcıdan doğrudan Supabase'e; güvenlik tamamen RLS'e bağlı | Değerlendirilecek |
+| `report_uploads.format` | `20260908000000_rapor_format_ayrimi.sql` SQL Editor'de çalıştırılmalı; uygulanana kadar Raporlar sayfası uyarı gösterir ve yükleme başarısız olur | Kullanıcı aksiyonu |
 | Service role key | `.env.local`'deki `SUPABASE_SERVICE_ROLE_KEY` aslında *publishable* anahtar → script tabanlı insert/DDL çalışmıyor | Kullanıcı aksiyonu |
 | Kurum verisi boşlukları | Onboarding checklist genişletme, ürün/abonelik modeli, şehir zenginleştirme | `PLAN_KURUM_VERISI.md` (onay bekliyor) |
 
