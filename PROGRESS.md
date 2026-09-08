@@ -68,8 +68,9 @@ _Yok._
 
 | Konu | Detay | Nereye ait |
 |---|---|---|
-| `types/database.ts` eksik | `notifications`, `report_uploads`, `report_kurum_stats`, `contracts.expected_teacher_count`, yeni `lead_stage_enum` değerleri generated types'ta yok | Faz 2 İş 1 |
-| 36 `any`/`as never` cast | Yukarıdaki tip eksikliğinin sonucu. Lint'te `warn` olarak izleniyor | Faz 2 İş 1 |
+| 35 `any` cast | Eski modüllerde (egitmenler, toplantilar, egitimler, calisma-gruplari, ekip…). Lint'te `warn` olarak izleniyor. Faz 2 İş 1 kapsamı dışıydı | Ayrı iş |
+| Supabase CLI yetkisi | Giriş yapılan hesap `gttoevyxkpjhlxglsomd` projesine erişemiyor → `gen types` çalışmıyor, tipler elle güncelleniyor | Kullanıcı aksiyonu |
+| Vercel bağlantısı | GitHub push'larına tepki vermiyor; canlı sürüm 27 Ağustos'ta kalmış (0 deployment kaydı) | Kullanıcı aksiyonu |
 | API route yok | Tüm mutation'lar tarayıcıdan doğrudan Supabase'e; güvenlik tamamen RLS'e bağlı | Değerlendirilecek |
 | `report_uploads.format` | `20260908000000_rapor_format_ayrimi.sql` SQL Editor'de çalıştırılmalı; uygulanana kadar Raporlar sayfası uyarı gösterir ve yükleme başarısız olur | Kullanıcı aksiyonu |
 | Service role key | `.env.local`'deki `SUPABASE_SERVICE_ROLE_KEY` aslında *publishable* anahtar → script tabanlı insert/DDL çalışmıyor | Kullanıcı aksiyonu |
@@ -78,8 +79,8 @@ _Yok._
 ## Sonraki Adımlar
 
 **`PLAN_FOUNDATION_FAZ2.md` sırasıyla:**
-1. **İş 1** — `types/database.ts` yenileme + tipsiz client temizliği *(sıradaki)*
-2. **İş 2** — Kazanılan lead → sözleşme köprüsü (trigger + fan-out bildirim)
+1. ~~**İş 1** — `types/database.ts` yenileme + tipsiz client temizliği~~ ✅ 2026-09-08
+2. **İş 2** — Kazanılan lead → sözleşme köprüsü (trigger + fan-out bildirim) *(sıradaki)*
 3. **İş 3+4** — Sözleşme bitiş & lead durgunluk hatırlatma cron'ları (pg_cron)
 4. **İş 5** — Dashboard
 

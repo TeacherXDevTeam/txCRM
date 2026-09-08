@@ -1,13 +1,9 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 
-export function createReportClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+/** Paylaşılan typed browser client — report_* tabloları artık generated types'ta. */
+export const createReportClient = createClient;
 
 // Excel'den parse edilen ham kurs kaydı
 export interface CourseRow {

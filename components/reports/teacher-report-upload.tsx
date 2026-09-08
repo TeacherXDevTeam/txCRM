@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { Upload, FileSpreadsheet, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createReportClient } from "./report-client";
+import type { Json } from "@/types/database";
 import { computeTeacherStatsByKurum, type TeacherRow } from "./teacher-report-client";
 import { norm, num, intNum } from "./parse-utils";
 
@@ -141,7 +142,13 @@ export function TeacherReportUpload({ currentUserId, onYuklendi }: Props) {
     if (upErr || !up) { setError(upErr?.message ?? "Yükleme kaydı oluşturulamadı."); setBusy(false); return; }
 
     const uploadId = (up as { id: string }).id;
-    const stats = computeTeacherStatsByKurum(rows).map((s) => ({ upload_id: uploadId, ...s }));
+    const stats = computeTeacherStatsByKurum(rows).map((s) => ({
+      upload_id: uploadId,
+      kurum: s.kurum,
+      teacher_count: s.teacher_count,
+      // stats JSONB sütunu; yapımız düz veriden ibaret, Json'a serileşiyor
+      stats: s.stats as unknown as Json,
+    }));
     const { error: stErr } = await sb.from("report_kurum_stats").insert(stats);
     if (stErr) { setError(stErr.message); setBusy(false); return; }
 

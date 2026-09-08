@@ -1,24 +1,9 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/types/database";
 
-// notifications tablosu henüz generated types'ta olmadığı için tipsiz client.
-// (types/database.ts yeniden üretilince typed client'a geçilebilir.)
-export function createNotifClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+/** Paylaşılan typed browser client — notifications artık generated types'ta. */
+export const createNotifClient = createClient;
 
-export type AppNotification = {
-  id: string;
-  recipient_id: string;
-  type: string;
-  title: string;
-  body: string | null;
-  entity_type: string | null;
-  entity_id: string | null;
-  is_read: boolean;
-  created_at: string;
-};
+export type AppNotification = Database["public"]["Tables"]["notifications"]["Row"];

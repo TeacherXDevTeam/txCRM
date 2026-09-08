@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-08
 
+### Son İşlem — Faz 2 İş 1: Tip Yenileme + Cast Temizliği (2026-09-08)
+Supabase CLI ile tip üretimi denendi ama giriş yapılan hesabın `gttoevyxkpjhlxglsomd` projesine yetkisi yok; planın B planı uygulanıp `types/database.ts`'e eksik iki alan elle eklendi (`report_uploads.format`, `trainings.default_trainer_id` — diğerleri zaten vardı). `notif-client.ts` ve `report-client.ts` paylaşılan typed client'a bağlandı, `raporlar` ve `okullar` sayfalarındaki tipsiz `sb` erişimleri ile `contract-form`'daki `as never`/`as any` cast'leri kaldırıldı. Typed client `stats` JSONB sütununda gerçek bir tip uyuşmazlığı yakaladı; serileştirme sınırında açık `as unknown as Json` çevirimiyle çözüldü.
+
 ### Son İşlem — Raporlar: TeacherX Rapor Kimliği + Gizlilik Ayrımı (2026-09-08)
 Raporlar sayfası `kurum_raporu.py` çıktılarının görünümüne geçirildi: siyah üst şerit, marka paleti (`#E70917`/`#101010`/`#F4F2EE`), Poppins başlık + Inter gövde, üstten çizgili KPI kartları, halka grafik, yatay şube barları, sütun dağılımı, satır içi barlı tablolar. Grafikler saf SVG/CSS — recharts kaldırıldı, `/raporlar` 236 kB → 124 kB. **Gizlilik:** KULLANIM.md'nin "kurum raporu isim içermez" kuralı uygulandı — çıktı ikiye ayrıldı (`data-print="kurum"` isimsiz / `data-print="liste"` isimli). Öğretmen listesi yalnızca oturum belleğindeki ham satırlardan üretilir, DB'ye yazılmaz.
 

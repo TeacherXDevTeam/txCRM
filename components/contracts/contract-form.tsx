@@ -49,7 +49,7 @@ export function ContractForm({ contract, schools, packages, trainings, currentUs
     contract_value:  contract?.contract_value?.toString() ?? "",
     payment_status:  contract?.payment_status   ?? "odeme_bekleniyor",
     status:          contract?.status           ?? "aktif",
-    expected_teacher_count: (contract as { expected_teacher_count?: number | null } | undefined)?.expected_teacher_count?.toString() ?? "",
+    expected_teacher_count: contract?.expected_teacher_count?.toString() ?? "",
     notes:           contract?.notes            ?? "",
   });
 
@@ -100,12 +100,12 @@ export function ContractForm({ contract, schools, packages, trainings, currentUs
 
     let contractId = contract?.id;
     if (contract) {
-      const { error } = await supabase.from("contracts").update(payload as never).eq("id", contract.id);
+      const { error } = await supabase.from("contracts").update(payload).eq("id", contract.id);
       if (error) { setError(error.message); setLoading(false); return; }
     } else {
-      const { data, error } = await supabase.from("contracts").insert(payload as never).select("id").single();
+      const { data, error } = await supabase.from("contracts").insert(payload).select("id").single();
       if (error) { setError(error.message); setLoading(false); return; }
-      contractId = (data as any).id;
+      contractId = data.id;
     }
 
     // Sync orders

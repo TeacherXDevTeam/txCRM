@@ -10,10 +10,6 @@ const normKurum = (s: string) => (s ?? "").toLowerCase().trim();
 
 export default async function RaporlarPage() {
   const supabase = createClient();
-  // report_* tabloları generated types'ta yok → tipsiz erişim (Faz 2 İş 1'de düzelecek)
-  const sb = supabase as unknown as {
-    from: (t: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  };
 
   const { data: { user } } = await supabase.auth.getUser();
   const { data: memberRaw } = await supabase
@@ -37,7 +33,7 @@ export default async function RaporlarPage() {
   async function loadLatest<T>(format: "ogretmen" | "kurs") {
     const bos = { upload: null, kurumStats: [] as { kurum: string; teacher_count: number; stats: T }[] };
 
-    const { data: uploads, error: upErr } = await sb.from("report_uploads")
+    const { data: uploads, error: upErr } = await supabase.from("report_uploads")
       .select("id, dosya_adi, uploaded_at, satir_sayisi")
       .eq("format", format)
       .order("uploaded_at", { ascending: false })
@@ -47,7 +43,7 @@ export default async function RaporlarPage() {
     const upload = ((uploads ?? [])[0] as UploadInfo | undefined) ?? null;
     if (!upload) return bos;
 
-    const { data: statRows } = await sb.from("report_kurum_stats")
+    const { data: statRows } = await supabase.from("report_kurum_stats")
       .select("kurum, teacher_count, stats")
       .eq("upload_id", upload.id)
       .order("kurum");
@@ -63,7 +59,7 @@ export default async function RaporlarPage() {
   ]);
 
   // Sözleşmedeki "olması gereken öğretmen sayısı" → kurum (okul) adına göre
-  const { data: contractData } = await sb.from("contracts")
+  const { data: contractData } = await supabase.from("contracts")
     .select("expected_teacher_count, school:schools(name)")
     .not("expected_teacher_count", "is", null);
   const expectedByKurum: Record<string, number> = {};
