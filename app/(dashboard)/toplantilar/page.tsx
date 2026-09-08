@@ -38,7 +38,7 @@ export default async function ToplantilarPage() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Toplantılar</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Toplantı notları, todo'lar ve etiketler</p>
+        <p className="text-sm text-gray-500 mt-0.5">Toplantı notları, todo&apos;lar ve etiketler</p>
       </div>
       <MeetingsClient
         meetings={meetings as any}

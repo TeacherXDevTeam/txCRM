@@ -59,7 +59,6 @@ export function ContractsClient({ contracts, schools, packages, trainings, curre
   const [editing, setEditing]       = useState<Contract | null>(null);
   const [expanded, setExpanded]     = useState<Set<string>>(new Set());
 
-  const today = new Date().toISOString().split("T")[0];
   const expiringSoon = contracts.filter(
     (c) => c.status === "aktif" && c.end_date && daysUntil(c.end_date) <= 30 && daysUntil(c.end_date) > 0
   );
@@ -78,7 +77,7 @@ export function ContractsClient({ contracts, schools, packages, trainings, curre
   const pendingPay  = contracts.filter((c) => c.payment_status === "odeme_bekleniyor").length;
 
   function toggleExpand(id: string) {
-    setExpanded((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+    setExpanded((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
 
   async function deleteContract(id: string) {

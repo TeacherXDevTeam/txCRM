@@ -1,6 +1,12 @@
 # TeacherX CRM — Mevcut Durum
 
-> Her işlem sonunda güncellenir. Son güncelleme: 2026-08-27
+> Her işlem sonunda güncellenir. Son güncelleme: 2026-09-08
+
+### Son İşlem — Lint Onarımı + PROGRESS Senkronu (2026-09-08)
+`npm run lint` ESLint 9 / eslint-config-next 16 ile Next 14 arasındaki uyumsuzluk yüzünden hiç çalışmıyordu; `eslint@8` + `eslint-config-next@14.2.35`'e hizalandı ve ortaya çıkan 15 gerçek hata düzeltildi (6 ternary-as-statement, 4 ölü değişken/import, 3 kaçırılmamış apostrof, 2 shadcn override). `PROGRESS.md` 2026-06-19'dan beri bayattı ("Faz 0 bekliyor", "Supabase credentials eksik") — gerçek duruma göre yeniden yazıldı. Seed'de kalan `trainings.default_trainer_id` DDL'i `20260827000000_trainings_default_trainer.sql` olarak kayda geçirildi. type-check + build temiz.
+
+### Son İşlem — Okul→Eğitim Atamaları Seed (2026-08-27)
+24 okul sayfasından 180 atama `supabase/seed/26-27-atamalar.sql` olarak üretildi (fuzzy eşleştirme: tüm okul+eğitim eşleşti, 0 eşleşmeyen). Ön koşul: kurumlar + katalog seed'leri önce yüklenmeli. FMV Işık'ın 26-27 listesi elle verilen 5 eğitimle eklendi (tarihsiz); Matfen'in 5 satırı kaynakta geçersiz tarih (31.09) → scheduled_date NULL. status hepsi 'planlanmis', assigned_to=operasyon (COALESCE admin/any).
 
 ### Son İşlem — Eğitim Kataloğu + Eğitmenler Seed (2026-08-27)
 69 eğitim + 56 tekil eğitmen `supabase/seed/egitim-katalogu.sql` olarak hazırlandı (contacts[egitmen] + trainers + trainings). Eğitim→eğitmen ilişkisinin şemada yeri olmadığı için `trainings`'e additive `default_trainer_id` kolonu eklendi (migration + types güncellemesi bekliyor). category/format best-effort (format='cevrimici' varsayıldı). Dosya `.gitignore` kapsamında.

@@ -50,7 +50,6 @@ export function AssignmentsClient({ assignments, schools, trainings, trainers, m
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState<Assignment | null>(null);
 
-  const today = new Date();
   const overdue = assignments.filter(isOverdue);
 
   const filtered = assignments.filter((a) => {

@@ -24,7 +24,7 @@ export default async function LeadlerPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Leadler</h1>
-        <p className="text-sm text-gray-500 mt-1">Satış pipeline'ı ve lead takibi</p>
+        <p className="text-sm text-gray-500 mt-1">Satış pipeline&apos;ı ve lead takibi</p>
       </div>
       <LeadsBoard leads={leads} canWrite={canWrite} />
     </div>

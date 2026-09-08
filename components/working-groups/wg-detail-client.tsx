@@ -295,7 +295,7 @@ export function WGDetailClient({ wgId, phases, members, sessions, contacts, canW
                       </button>
                     )}
                     {s.notes && (
-                      <button onClick={() => setExpandedSession((prev) => { const next = new Set(prev); next.has(s.id) ? next.delete(s.id) : next.add(s.id); return next; })}
+                      <button onClick={() => setExpandedSession((prev) => { const next = new Set(prev); if (next.has(s.id)) next.delete(s.id); else next.add(s.id); return next; })}
                         className="p-1 text-gray-400 hover:text-gray-700">
                         {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </button>
