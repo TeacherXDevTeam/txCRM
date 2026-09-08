@@ -37,15 +37,15 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Yazdırma / PDF çıktısı (Raporlar → "PDF olarak indir")
-   Tailwind'in print: varyantı bileşenlerde kullanılır; buradakiler sayfa
-   düzeyinde, sınıf ile ifade edilemeyen kurallar.
+   Yazdırma / PDF çıktısı — Raporlar
+   İki ayrı çıktı var ve ikisi ASLA aynı sayfada basılmaz:
+     data-print="kurum"  → kuruma gönderilen rapor. Toplulaştırılmış, isim YOK.
+     data-print="liste"  → iç kullanım için öğretmen listesi. İsim VAR.
+   Ayrım KULLANIM.md'deki gizlilik taahhüdünün gereği: ikisini birlikte
+   paylaşmak kurum raporunun taşıdığı taahhüdü geçersiz kılar.
 --------------------------------------------------------------------------- */
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 12mm 10mm;
-  }
+  @page { size: A4 portrait; margin: 12mm 10mm; }
 
   html, body {
     height: auto !important;
@@ -53,21 +53,21 @@
     background: #fff !important;
   }
 
-  /* Grafik renkleri ve rozet arka planları çıktıda da bassın */
+  /* Marka renkleri ve grafik dolguları çıktıda da bassın */
   *, *::before, *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Kartlar sayfa ortasından bölünmesin */
-  .print\:break-inside-avoid {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
+  /* İç araçlar (yükleme, sekme, kurum seçici, butonlar) hiçbir çıktıda olmaz */
+  .ic-arac { display: none !important; }
 
-  /* Recharts SVG'leri kapsayıcıyı taşmasın */
-  .recharts-wrapper,
-  .recharts-surface {
-    max-width: 100% !important;
-  }
+  /* Çıktı türüne göre bölüm ayrımı */
+  body[data-print="kurum"] .yalniz-liste { display: none !important; }
+  body[data-print="liste"] .yalniz-kurum { display: none !important; }
+  /* Tür seçilmeden yazdırılırsa (Ctrl+P) isimli liste basılmaz — güvenli varsayılan */
+  body:not([data-print]) .yalniz-liste { display: none !important; }
+
+  .print\:break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+  tr { break-inside: avoid; }
 }

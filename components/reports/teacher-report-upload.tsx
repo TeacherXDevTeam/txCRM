@@ -9,7 +9,15 @@ import { createReportClient } from "./report-client";
 import { computeTeacherStatsByKurum, type TeacherRow } from "./teacher-report-client";
 import { norm, num, intNum } from "./parse-utils";
 
-interface Props { currentUserId: string }
+interface Props {
+  currentUserId: string;
+  /**
+   * Yükleme başarılı olunca ham satırları üst bileşene verir — öğretmen
+   * listesi çıktısı bunları kullanır. Bu satırlar DB'ye YAZILMAZ; yalnızca
+   * bu oturumun belleğinde yaşar ve sayfa yenilenince kaybolur.
+   */
+  onYuklendi?: (rows: TeacherRow[]) => void;
+}
 
 type Field = "ad" | "soyad" | "eposta" | "kurum" | "sube" | "tamamlanan" | "devam" | "yuzde";
 
@@ -30,7 +38,7 @@ const MAP: Record<string, Field> = {
 
 const BEKLENEN = "Adı Soyadı · E-posta · Kurum · Şube · Tamamlanan · Devam Eden · Tamamlama %";
 
-export function TeacherReportUpload({ currentUserId }: Props) {
+export function TeacherReportUpload({ currentUserId, onYuklendi }: Props) {
   const router = useRouter();
   const [rows, setRows] = useState<TeacherRow[]>([]);
   const [fileName, setFileName] = useState("");
@@ -137,6 +145,7 @@ export function TeacherReportUpload({ currentUserId }: Props) {
     const { error: stErr } = await sb.from("report_kurum_stats").insert(stats);
     if (stErr) { setError(stErr.message); setBusy(false); return; }
 
+    onYuklendi?.(rows);
     setRows([]); setFileName(""); setWarn(null); setBusy(false);
     router.refresh();
   }
@@ -145,30 +154,30 @@ export function TeacherReportUpload({ currentUserId }: Props) {
   const subeCount = new Set(rows.map((r) => r.sube).filter(Boolean)).size;
 
   return (
-    <div className="rounded-xl border bg-white p-5 print:hidden">
+    <div className="ic-arac rounded-lg border border-tx-cizgi bg-white p-5">
       <div className="flex items-center gap-2 mb-3">
-        <Upload className="h-4 w-4 text-gray-400" />
-        <h2 className="text-base font-semibold text-gray-900">Öğretmen Özeti Yükle</h2>
+        <Upload className="h-4 w-4 text-tx-gri" />
+        <h2 className="font-baslik text-base font-semibold text-tx-metin">Öğretmen Özeti Yükle</h2>
       </div>
 
       {rows.length === 0 ? (
-        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 py-8 text-center hover:border-blue-400">
-          <FileSpreadsheet className="h-8 w-8 text-gray-300" />
-          <span className="text-sm text-gray-600">.xlsx dosyasını seç</span>
-          <span className="text-xs text-gray-400">Sütunlar: {BEKLENEN}</span>
-          <span className="text-xs text-gray-400">Dosya tarayıcıda işlenir; sunucuya yalnızca kurum bazlı sayısal özet gider.</span>
+        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-tx-cizgi py-8 text-center hover:border-tx-kirmizi">
+          <FileSpreadsheet className="h-8 w-8 text-tx-cizgi" />
+          <span className="text-sm text-tx-metin">.xlsx dosyasını seç</span>
+          <span className="text-xs text-tx-gri">Sütunlar: {BEKLENEN}</span>
+          <span className="text-xs text-tx-gri">Dosya tarayıcıda işlenir; sunucuya yalnızca kurum bazlı sayısal özet gider.</span>
           <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} />
         </label>
       ) : (
-        <div className="flex items-center justify-between rounded-lg bg-blue-50/50 border border-blue-200 px-4 py-3">
+        <div className="flex items-center justify-between rounded-lg border border-tx-cizgi bg-tx-kagit px-4 py-3">
           <div className="text-sm">
-            <p className="font-medium text-gray-800">{fileName}</p>
-            <p className="text-gray-500">
+            <p className="font-medium text-tx-metin">{fileName}</p>
+            <p className="text-tx-gri">
               {rows.length.toLocaleString("tr-TR")} öğretmen · {kurumCount} kurum{subeCount > 0 ? ` · ${subeCount} şube` : ""}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => { setRows([]); setFileName(""); setWarn(null); }} className="text-gray-400 hover:text-gray-600" title="Vazgeç">
+            <button onClick={() => { setRows([]); setFileName(""); setWarn(null); }} className="text-tx-gri hover:text-tx-metin" title="Vazgeç">
               <X className="h-5 w-5" />
             </button>
             <Button onClick={handleUpload} disabled={busy}>{busy ? "İşleniyor..." : "Yükle ve İşle"}</Button>
@@ -177,11 +186,11 @@ export function TeacherReportUpload({ currentUserId }: Props) {
       )}
 
       {warn && (
-        <p className="mt-3 flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+        <p className="mt-3 flex items-start gap-2 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2 text-sm text-tx-metin">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{warn}
         </p>
       )}
-      {error && <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-3 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2 text-sm text-tx-metin">{error}</p>}
     </div>
   );
 }

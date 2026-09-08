@@ -100,33 +100,33 @@ export function ReportUpload({ currentUserId }: Props) {
   const teacherCount = new Set(rows.map((r: CourseRow) => r.eposta || r.ad)).size;
 
   return (
-    <div className="rounded-xl border bg-white p-5 print:hidden">
+    <div className="ic-arac rounded-lg border border-tx-cizgi bg-white p-5">
       <div className="flex items-center gap-2 mb-3">
-        <Upload className="h-4 w-4 text-gray-400" />
-        <h2 className="text-base font-semibold text-gray-900">Excel Rapor Yükle</h2>
+        <Upload className="h-4 w-4 text-tx-gri" />
+        <h2 className="font-baslik text-base font-semibold text-tx-metin">Excel Rapor Yükle</h2>
       </div>
 
       {rows.length === 0 ? (
-        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 py-8 text-center hover:border-blue-400">
-          <FileSpreadsheet className="h-8 w-8 text-gray-300" />
-          <span className="text-sm text-gray-600">.xlsx dosyasını seç</span>
-          <span className="text-xs text-gray-400">Sütunlar: Ad · Soyad · E-posta · Kurum · Şube · Kurs · İlerleme Yüzdesi · Sertifika Tarihi</span>
+        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-tx-cizgi py-8 text-center hover:border-tx-kirmizi">
+          <FileSpreadsheet className="h-8 w-8 text-tx-cizgi" />
+          <span className="text-sm text-tx-metin">.xlsx dosyasını seç</span>
+          <span className="text-xs text-tx-gri">Sütunlar: Ad · Soyad · E-posta · Kurum · Şube · Kurs · İlerleme Yüzdesi · Sertifika Tarihi</span>
           <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} />
         </label>
       ) : (
-        <div className="flex items-center justify-between rounded-lg bg-blue-50/50 border border-blue-200 px-4 py-3">
+        <div className="flex items-center justify-between rounded-lg border border-tx-cizgi bg-tx-kagit px-4 py-3">
           <div className="text-sm">
-            <p className="font-medium text-gray-800">{fileName}</p>
-            <p className="text-gray-500">{rows.length.toLocaleString("tr-TR")} kurs kaydı · {teacherCount} öğretmen · {kurumCount} kurum</p>
+            <p className="font-medium text-tx-metin">{fileName}</p>
+            <p className="text-tx-gri">{rows.length.toLocaleString("tr-TR")} kurs kaydı · {teacherCount} öğretmen · {kurumCount} kurum</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => { setRows([]); setFileName(""); }} className="text-gray-400 hover:text-gray-600" title="Vazgeç"><X className="h-5 w-5" /></button>
+            <button onClick={() => { setRows([]); setFileName(""); }} className="text-tx-gri hover:text-tx-metin" title="Vazgeç"><X className="h-5 w-5" /></button>
             <Button onClick={handleUpload} disabled={busy}>{busy ? "İşleniyor..." : "Yükle ve İşle"}</Button>
           </div>
         </div>
       )}
 
-      {error && <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-3 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2 text-sm text-tx-metin">{error}</p>}
     </div>
   );
 }

@@ -75,16 +75,17 @@ export default async function RaporlarPage() {
 
   return (
     <div className="space-y-6">
-      <div className="print:hidden">
-        <h1 className="text-2xl font-bold text-gray-900">Raporlar</h1>
-        <p className="text-sm text-gray-500 mt-1">
+      <div className="ic-arac">
+        <p className="mb-1 text-[12px] font-bold uppercase tracking-[0.16em] text-tx-kirmizi">TeacherX</p>
+        <h1 className="font-baslik text-2xl font-semibold text-tx-metin">Raporlar</h1>
+        <p className="mt-1 text-sm text-tx-gri">
           Platformdan aldığınız Excel&apos;i yükleyin; kurum bazında özet, grafikler ve sözleşme karşılaştırması otomatik çıkar.
           Dosya tarayıcınızda işlenir, sunucuya yalnızca sayısal özet gider.
         </p>
       </div>
 
       {schemaError && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 print:hidden">
+        <div className="ic-arac rounded-lg border-l-[3px] border-tx-kirmizi bg-white px-4 py-3 text-sm text-tx-metin">
           <p className="font-medium">Veritabanı güncellemesi bekliyor</p>
           <p className="mt-1 text-xs">
             Raporlar iki formata ayrıldı ama <code className="rounded bg-amber-100 px-1">report_uploads.format</code> kolonu

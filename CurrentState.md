@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-08
 
+### Son İşlem — Raporlar: TeacherX Rapor Kimliği + Gizlilik Ayrımı (2026-09-08)
+Raporlar sayfası `kurum_raporu.py` çıktılarının görünümüne geçirildi: siyah üst şerit, marka paleti (`#E70917`/`#101010`/`#F4F2EE`), Poppins başlık + Inter gövde, üstten çizgili KPI kartları, halka grafik, yatay şube barları, sütun dağılımı, satır içi barlı tablolar. Grafikler saf SVG/CSS — recharts kaldırıldı, `/raporlar` 236 kB → 124 kB. **Gizlilik:** KULLANIM.md'nin "kurum raporu isim içermez" kuralı uygulandı — çıktı ikiye ayrıldı (`data-print="kurum"` isimsiz / `data-print="liste"` isimli). Öğretmen listesi yalnızca oturum belleğindeki ham satırlardan üretilir, DB'ye yazılmaz.
+
 ### Son İşlem — Raporlar: Öğretmen Özeti Formatı (2026-09-08)
 Raporlar sayfası yalnızca kurs-bazlı Excel'i (Kurs + Sertifika Tarihi sütunlu) okuyabiliyordu; platformdan gelen öğretmen-bazlı özet (Adı Soyadı · Tamamlanan · Devam Eden · Tamamlama %) hata vermeden yükleniyor ama sessizce yanlış sayı üretiyordu (sentetik testte ort. tamamlama %54 yerine %20). Sayfa "Öğretmen Özeti" / "Kurs Bazlı" iki sekmeye ayrıldı; yeni format için ayrı parser + KPI/grafik seti (medyan, kurs-ağırlıklı tamamlama, % ve kurs-adedi dağılımları, şube tablosu, risk listesi) ve `window.print()` tabanlı PDF çıktısı eklendi. `report_uploads.format` kolonu ile iki rapor birbirini ezmiyor (migration `20260908000000_rapor_format_ayrimi.sql` — **SQL Editor'de çalıştırılmalı**, uygulanana kadar sayfa uyarı gösterir).
 
