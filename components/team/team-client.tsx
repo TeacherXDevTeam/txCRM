@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Shield, Eye, User, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { TR_TZ } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { Database } from "@/types/database";
@@ -35,7 +36,7 @@ function initials(name: string) {
 
 function fmtDate(d: string | null) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" });
+  return new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "short", year: "numeric", timeZone: TR_TZ }).format(new Date(d));
 }
 
 export function TeamClient({ members, currentId, isAdmin }: TeamClientProps) {
