@@ -2,8 +2,8 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-08
 
-### Son İşlem — Kurum Eğitim Takip Panosu Planı (2026-09-08)
-`TeacherX_Kurum_Egitim_Takip_Panosu.xlsx` (10 sayfa) incelendi ve CRM karşılığı `PLAN_KURUM_TAKIP_PANOSU.md` olarak planlandı. İki kritik bulgu: (1) "ortalama" üç yerde üç farklı şey demek — CRM'in `avgCompletion`'ı Excel'in Genel Ortalaması değil, Tamamlanma Oranı'na yakın; kuruma giden raporla CRM ekranı farklı sayı gösterme riski var. (2) Excel'in Öğretmen Listesi/Detayı sayfaları ham satır saklamayı gerektiriyor, bu da mevcut KVKK tercihiyle çarpışıyor. Aylık Takip ise CRM'de bedava — her yükleme zaten tarihli bir kesit. Plan onay bekliyor; iki karar noktası çözülmeden koda başlanmayacak.
+### Son İşlem — Kurum Eğitim Takip Panosu Planı v2 (2026-09-08)
+`TeacherX_Kurum_Egitim_Takip_Panosu.xlsx` incelendi; `PLAN_KURUM_TAKIP_PANOSU.md` kullanıcı yönlendirmesiyle yeniden yazıldı. Temel ilke: **girdi değil, üretilen çıktı saklanır** — kişi bazlı hiçbir bilgi (ad, e-posta, kişi ilerlemesi) DB'ye yazılmaz, rapora girmez; risk listesi ve isimli Öğretmen Listesi PDF'i kaldırılacak. JSONB blob yerine gerçek kolonlu 5 tablo (`report_kesit`, `report_kurum`, `report_sube`, `report_egitim`, `report_sertifika_ay`) — üretimde JSONB şema kayması çöktürmüştü ve kurumlar arası sorgu SQL'e inemiyordu. Belirsiz `avgCompletion` yerine iki ayrı metrik: `ilerleme_ortalamasi` (kısmi sayılır) ve `tamamlanma_orani` (sayılmaz), ikisi de öğretmen düzeyinden. 9 adımlık iş sırası çıkarıldı; onay bekliyor.
 
 ### Son İşlem — Hotfix: Raporlar'da hydration çökmesi (2026-09-08)
 Deploy sonrası `/raporlar` "Application error: a client-side exception has occurred" veriyordu. Sebep: tarihler `toLocaleString("tr-TR")` ile timeZone verilmeden biçimleniyordu — Vercel sunucuları UTC, tarayıcı UTC+3 → SSR ve client farklı metin üretiyor → React #425/#418/#423. Yerelde görünmüyordu çünkü geliştirme makinesi de UTC+3. `lib/utils.ts`'e `TR_TZ` + `formatDateTime` eklendi, tüm tarih biçimlemeleri `Europe/Istanbul`a sabitlendi (raporlar, bildirim zili, ekip). `TZ=UTC` prodüksiyon build'i + UTC+3 tarayıcıyla yeniden üretildi ve doğrulandı: konsol temiz.

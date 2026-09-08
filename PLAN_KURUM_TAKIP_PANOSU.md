@@ -1,191 +1,238 @@
 # PLAN — Kurum Eğitim Takip Panosu (CRM)
 
-> **Kaynak:** `TeacherX_Kurum_Egitim_Takip_Panosu.xlsx` (10 sayfa, 10.000 satır kapasiteli Excel panosu; örnek veri GEN Koleji + ALKEV + BİLNET). Kullanıcı bu panonun CRM içindeki karşılığını istiyor: ham tamamlama raporu CRM'e yüklenecek, kurumlar arası ilişkili veri Supabase'de tutulacak.
-> **Hazırlayan:** Claude — 2026-09-08. **Onay bekliyor** — §2 ve §6'daki karar noktaları çözülmeden koda başlanmamalı.
+> **Kaynak:** `TeacherX_Kurum_Egitim_Takip_Panosu.xlsx` (10 sayfa). CRM karşılığı bu plana göre kurulacak.
+> **Hazırlayan:** Claude — 2026-09-08 (v2, kullanıcı yönlendirmesiyle yeniden yazıldı).
 
 ---
 
-## 0. Bağlam (ÖNCE OKU)
+## 0. Temel ilke — ne saklanır, ne saklanmaz
 
-- **Ortak canlı Supabase.** DDL anon anahtarla çalışmaz; şema değişiklikleri kullanıcıya SQL bloğu olarak verilir, SQL Editor'de çalıştırılır, aynı SQL `supabase/migrations/` altına commit edilir.
-- **Supabase CLI yetkisi yok.** Giriş yapılan hesap `gttoevyxkpjhlxglsomd` projesine erişemiyor → `gen types` çalışmıyor, `types/database.ts` elle güncelleniyor.
-- **Vercel** projesi `crmtx`; Git bağlantısı bir dönem kopuktu, deploy sonrası yayındaki sürümün doğrulanması gerekir.
-- **Gizlilik taahhüdü:** `KULLANIM.md` (kurum_raporu.py paketi) — *kurum raporu isim içermez, öğretmen listesi ayrı belgedir, ikisi birlikte paylaşılmaz.* Bu plan §6'da doğrudan bu kuralla çarpışıyor.
-- Mevcut Raporlar modülü: `report_uploads` + `report_kurum_stats` (kurum başına JSONB özet). **Ham satırlar bilinçli olarak saklanmıyor.**
+**Saklanan: yalnızca üretilen çıktı.** Excel yüklendiğinde tarayıcıda hesaplanan kurum/şube/eğitim düzeyindeki **sayılar** kaydedilir. Bir kesit şu soruya cevap verir:
 
----
+> *"8 Eylül 2026'da ALKEV'de kaç öğretmen vardı, ortalaması neydi, kaç eğitim atanmıştı?"*
 
-## 1. Excel ne yapıyor → CRM'de karşılığı
+**Saklanmayan: girdinin kendisi.** Ad, soyad, e-posta, kişi bazlı ilerleme — hiçbiri sunucuya gitmez, hiçbir tabloda durmaz, hiçbir rapora girmez.
 
-| Excel sayfası | Ne veriyor | CRM'de durum |
-|---|---|---|
-| **Ham Veri** | `Ad · Soyad · E-posta · Kurum · Şube · Eğitim · İlerleme (%) · Sertifika Tarihi` — tüm kurumlar alt alta | ✅ Aynı format "Kurs Bazlı" sekmesinde okunuyor |
-| **Pano** | Tek kurum (veya TÜMÜ) için 8 KPI + şube grafiği + eğitim grafiği + şube durum kırılımı + kümülatif sertifika eğrisi | 🟡 KPI'ların çoğu var; TÜMÜ toplaması ve sertifika eğrisi yok |
-| **Kurum Karşılaştırma** | Kurumları yan yana sıralayan tablo (12 sütun, performansa göre sıra) | ❌ Yok — en büyük eksik |
-| **Şube Analizi** | Tüm kurumların şubeleri tek tabloda; Hiç Başlamayan %, Devam Eden dahil | 🟡 Kurum içi şube var, kurumlar arası yok |
-| **Eğitim Analizi** | Eğitim bazında atanan/tamamlayan/hiç başlamayan/sertifika | 🟡 Kurum içi var, kurumlar arası yok |
-| **Aylık Takip** | Aydan aya kurum ortalaması + kümülatif sertifika. **Excel'de elle kopyala-yapıştır ritüeli gerektiriyor** | ❌ Yok — ama CRM'de **bedava** (§5) |
-| **Öğretmen Listesi** | Her öğretmen tek satır: atanan/ortalama/tamamladığı/sertifika/durum | ❌ Ham satır gerektirir (§6) |
-| **Öğretmen Detayı** | Tek öğretmenin eğitim eğitim dökümü | ❌ Ham satır gerektirir (§6) |
-| **Listeler / Kılavuz** | Açılır liste kaynakları, tanımlar | — CRM'de gereksiz |
+Bunun üç sonucu var:
 
-**Excel'in kapasitesi:** 25 kurum · 60 şube · 30 eğitim · 1000 öğretmen · 400 aylık kayıt. CRM'de bu sınırlar kalkar (mevcut veri zaten 92 kurum).
+1. `KULLANIM.md`'deki gizlilik taahhüdü yapısal olarak garanti altına alınır — isim saklanmadığı için sızması mümkün değil.
+2. Mevcut **risk listesi kaldırılır** (ekrandan ve koddan). Şu an isimleri gösteriyor.
+3. Mevcut **"Öğretmen Listesi (PDF)"** çıktısı kaldırılır. Kullanıcı bu bilgiye ihtiyaç duymadığını belirtti; kişi bazlı takip gerekirse kaynak Excel'den bakılır.
 
 ---
 
-## 2. 🔴 KARAR 1 — "Ortalama" üç ayrı şey demek
+## 1. Yeni yapı — neden JSONB'den vazgeçiliyor
 
-Şu an üç yerde üç farklı tanım var ve **hepsi "ortalama" diye anılıyor:**
+Bugün özetler `report_kurum_stats.stats` içinde tek bir JSONB blob olarak duruyor. Bu yapı iki somut sorun üretti:
 
-| Kaynak | Tanım | Kısmi ilerleme |
-|---|---|---|
-| **Excel — Genel Ortalama** | Tüm (öğretmen × eğitim) satırlarının ilerleme yüzdesi ortalaması | **Sayılır** |
-| **Excel — Tamamlanma Oranı** | Tamamlanan (%100) eğitim ÷ atanan eğitim | Sayılmaz |
-| **CRM — `avgCompletion`** | Önce her öğretmenin `tamamladığı ÷ atanan`ı, sonra bunların ortalaması | Sayılmaz |
-| **kurum_raporu.py** | Önce her öğretmenin kendi ilerleme ortalaması, sonra bunların ortalaması | **Sayılır** |
+- **Şema kayması çöktürüyor.** Eski kayıtlarda olmayan bir alan okununca sayfa "Application error" veriyor — bu üretimde yaşandı (`Cannot read properties of undefined (reading 'length')`).
+- **Sorgulanamıyor.** "Tüm kurumları ortalamaya göre sırala" ya da "ALKEV'in son 6 ayı" gibi bir soru JSONB içinden SQL ile cevaplanamıyor; tüm bloblar çekilip JavaScript'te açılıyor.
 
-Yani CRM'in bugünkü `avgCompletion`'ı Excel'in **Genel Ortalama**'sı değil, **Tamamlanma Oranı**'na yakın bir şey. Ve `kurum_raporu.py` ile de aynı değil: biri satır düzeyinde, diğeri öğretmen düzeyinde ortalıyor — öğretmenlere farklı sayıda eğitim atanmışsa sonuçlar ayrışır.
+Yeni yapı **gerçek kolonlar** kullanır. Sorgu SQL'e iner, eksik alan diye bir şey olmaz, kurumlar arası karşılaştırma ve zaman serisi doğrudan veritabanından gelir.
 
-`ENTEGRASYON.md` bu riski zaten yazmış: *"CRM ekranı ile kuruma giden rapor farklı sayı gösterir ve hangisinin doğru olduğu belirsizleşir."*
-
-**Öneri:** `kurum_raporu.py` tanımını tek hakikat kabul et (kuruma giden rapor o) ve **iki metriği birden** hesapla, ayrı isimlerle:
-
-- `genelOrtalama` — öğretmen düzeyinde, kısmi ilerleme sayılır *(Excel: Genel Ortalama)*
-- `tamamlanmaOrani` — tamamlanan ÷ atanan, kısmi sayılmaz *(Excel: Tamamlanma Oranı)*
-
-Mevcut `avgCompletion` alanı `tamamlanmaOrani` olarak yeniden adlandırılır; eski kayıtlar okunurken geriye dönük eşlenir.
-
-**Karar gerekli:** Bu öneri kabul mü, yoksa Excel'in satır-düzeyi tanımı mı esas alınsın? Sayılar kuruma gidiyor; sonradan değiştirmek güven kaybettirir.
-
----
-
-## 3. Veri modeli
-
-### 3.1 Mevcut (değişmiyor)
-
-```
-report_uploads      (id, uploaded_by, dosya_adi, satir_sayisi, format, uploaded_at)
-report_kurum_stats  (id, upload_id, kurum, teacher_count, stats JSONB, created_at)
-```
-
-Bu yapı **kurumlar arası karşılaştırma ve aylık takip için zaten yeterli** — bir yükleme = bir kesit, kurum başına bir satır. Ek tablo gerekmiyor.
-
-### 3.2 `stats` JSONB'ye eklenecekler (şema değişikliği YOK)
-
-| Alan | Neden |
-|---|---|
-| `genelOrtalama` | §2 |
-| `certTeacherCount` | Excel: Sertifika Alan Öğretmen |
-| `subeler[].hicBaslamayan`, `.devamEden`, `.certCount` | Şube Analizi sütunları |
-| `kurslar[].hicBaslamayan`, `.certCount` | Eğitim Analizi sütunları |
-| `sertifikaAylik: [{ay: "2026-08", adet: n}]` | Kümülatif sertifika eğrisi — `Sertifika Tarihi`'nden aylık histogram. **Kişisel veri içermez**, ham satır saklamadan geçmişi verir |
-
-Hepsi additive; eski kayıtlar okunurken `?? varsayılan` ile ele alınır.
-
-### 3.3 Yeni tablo — kurum ↔ okul eşleştirme
-
-Rapordaki `Kurum` serbest metin (platform çıktısı); CRM'de `schools` tablosu var. Bugün eşleştirme küçük harfe indirgenmiş ad karşılaştırmasıyla yapılıyor — kırılgan. `BACKEND_TALEPLERI.md` de kalıcı `kurum_id` istiyor ama gelene kadar CRM kendi köprüsünü kurmalı.
+### 1.1 Tablolar
 
 ```sql
-CREATE TABLE report_kurum_eslestirme (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  rapor_kurum text NOT NULL UNIQUE,   -- dökümdeki ad, normalize edilmiş
-  school_id   uuid REFERENCES schools(id) ON DELETE SET NULL,
-  onaylayan   uuid REFERENCES team_members(id) ON DELETE SET NULL,
-  created_at  timestamptz NOT NULL DEFAULT now()
+-- Bir Excel yüklemesi = bir KESİT
+create table report_kesit (
+  id             uuid primary key default gen_random_uuid(),
+  kesit_tarihi   date        not null,          -- verinin ait olduğu gün
+  dosya_adi      text,
+  kaynak_satir   integer     not null default 0,-- Excel'de kaç satır vardı (denetim izi)
+  yukleyen       uuid        references team_members(id) on delete set null,
+  created_at     timestamptz not null default now(),
+  unique (kesit_tarihi)                          -- gün başına tek kesit; yeniden yükleme üzerine yazar
+);
+
+-- KESİT × KURUM  — panonun ana tablosu
+create table report_kurum (
+  id                    uuid primary key default gen_random_uuid(),
+  kesit_id              uuid not null references report_kesit(id) on delete cascade,
+  kurum_adi             text not null,
+  school_id             uuid references schools(id) on delete set null,
+
+  ogretmen_sayisi       integer not null default 0,
+  sube_sayisi           integer not null default 0,
+  egitim_sayisi         integer not null default 0,
+  kayit_sayisi          integer not null default 0,  -- öğretmen × eğitim satır adedi
+
+  ilerleme_ortalamasi   numeric(5,2) not null default 0,  -- %; kısmi ilerleme SAYILIR
+  tamamlanma_orani      numeric(5,2) not null default 0,  -- %; kısmi SAYILMAZ
+  tamamlanan_egitim     integer not null default 0,
+
+  sertifika_sayisi      integer not null default 0,
+  sertifika_alan        integer not null default 0,       -- en az 1 sertifikası olan öğretmen
+
+  hic_baslamayan        integer not null default 0,
+  devam_eden            integer not null default 0,
+  tumunu_tamamlayan     integer not null default 0,
+
+  esitsiz_atama         integer not null default 0,       -- bkz. §2
+  created_at            timestamptz not null default now(),
+  unique (kesit_id, kurum_adi)
+);
+
+-- KESİT × KURUM × ŞUBE
+create table report_sube (
+  id                  uuid primary key default gen_random_uuid(),
+  kurum_id            uuid not null references report_kurum(id) on delete cascade,
+  sube_adi            text not null,
+  ogretmen_sayisi     integer not null default 0,
+  egitim_sayisi       integer not null default 0,
+  ilerleme_ortalamasi numeric(5,2) not null default 0,
+  tamamlanma_orani    numeric(5,2) not null default 0,
+  sertifika_sayisi    integer not null default 0,
+  hic_baslamayan      integer not null default 0,
+  devam_eden          integer not null default 0,
+  tumunu_tamamlayan   integer not null default 0,
+  unique (kurum_id, sube_adi)
+);
+
+-- KESİT × KURUM × EĞİTİM
+create table report_egitim (
+  id                 uuid primary key default gen_random_uuid(),
+  kurum_id           uuid not null references report_kurum(id) on delete cascade,
+  egitim_adi         text not null,
+  atanan_ogretmen    integer not null default 0,
+  tamamlayan         integer not null default 0,
+  tamamlanma_orani   numeric(5,2) not null default 0,
+  hic_baslamayan     integer not null default 0,
+  sertifika_sayisi   integer not null default 0,
+  unique (kurum_id, egitim_adi)
+);
+
+-- Kümülatif sertifika eğrisi — Sertifika Tarihi'nden aylık histogram (kişisel veri yok)
+create table report_sertifika_ay (
+  id       uuid primary key default gen_random_uuid(),
+  kurum_id uuid not null references report_kurum(id) on delete cascade,
+  ay       date not null,      -- ayın 1'i
+  adet     integer not null default 0,
+  unique (kurum_id, ay)
 );
 ```
 
-Yüklemede eşleşmeyen kurumlar bir "eşleştirme bekliyor" listesine düşer; kullanıcı dropdown'dan okul seçer. Eşleştirme bir kez yapılır, sonraki yüklemelerde otomatik uygulanır.
+**Kurum ↔ okul köprüsü.** `school_id` doğrudan `report_kurum` üzerinde. İlk yüklemede ada göre otomatik eşleşir; eşleşmeyenler ekranda "eşleştirme bekliyor" listesine düşer, kullanıcı dropdown'dan seçer. Eşleştirme bir kez yapılır ve sonraki kesitlere ada göre taşınır. Bu köprü kurulunca rapor verisi sözleşme, atama, lead ve toplantı verisiyle aynı okul üzerinden birleşir.
 
-**Bu, kullanıcının istediği "diğer kurumlarla ilişkili veriler"in omurgası:** eşleştirme kurulunca rapor verisi sözleşme (`expected_teacher_count`), atama, lead ve toplantı verisiyle aynı okul üzerinden birleşir.
+**RLS:** dört tabloda da mevcut desen — `get_my_role() = 'admin' OR department = 'operasyon'`.
 
----
+### 1.2 Eski tabloların akıbeti
 
-## 4. Ekranlar
-
-Raporlar sayfasına yeni sekmeler:
-
-1. **Kurum Karşılaştırma** — tüm kurumlar tek tabloda, sıralanabilir, performansa göre renk skalası. Sözleşmedeki hedef öğretmen sayısıyla kapsama sütunu. TeacherX kimliğinde, PDF'e basılabilir.
-2. **Şube Analizi** — tüm kurumların şubeleri; kurum filtresi. "Hiç Başlamayan %" ters renk skalası (yüksek = kırmızı).
-3. **Eğitim Analizi** — eğitim bazında tamamlanma; hangi eğitim nerede tıkanıyor.
-4. **Aylık Takip** — §5.
-5. Mevcut **Kurum Raporu** sekmesi (tek kurum, kuruma gönderilen) korunur.
-
-"TÜMÜ" seçeneği: kurum seçicisine eklenir, tüm kurumların toplamını gösterir. Toplama kuralı §2'deki tanıma uymalı — kurum ortalamalarının ortalaması **değil**, öğretmen düzeyinden yeniden hesap. Bunun için `stats` içinde ağırlık bilgisi (öğretmen sayısı, toplam ilerleme toplamı) tutulmalı.
+`report_uploads`, `report_kurum_stats` — yeni akış çalıştığı doğrulandıktan sonra kaldırılır. Aradaki geçişte ikisi yan yana durur; eski Raporlar sekmesi eski tablolardan okumaya devam eder. Veri taşınmaz (kesitler yeniden yüklenerek oluşur).
 
 ---
 
-## 5. Aylık Takip — CRM'de bedava
+## 2. Metrik tanımları — tek hakikat
 
-Excel'in en zahmetli özelliği bu: ham veride tarih olmadığı için her ay elle "kopyala → değer olarak yapıştır" ritüeli gerekiyor, unutulursa geçmiş kayboluyor.
+"Ortalama" bugün üç yerde üç farklı şey demek. İki metrik ayrı isimlerle tanımlanır ve **her ikisi de her zaman gösterilir**:
 
-**CRM'de bu iş zaten yapılmış durumda:** her `report_uploads` kaydının `uploaded_at`'i var ve o kesitin kurum özetleri `report_kurum_stats`'te duruyor. Yani **geçmiş otomatik birikiyor**, hiçbir ritüel gerekmiyor.
+| Ad | Tanım | Kısmi ilerleme |
+|---|---|---|
+| **İlerleme Ortalaması** | Her öğretmenin kendi eğitimlerindeki ilerleme ortalaması → bunların ortalaması | **sayılır** |
+| **Tamamlanma Oranı** | Her öğretmenin `tamamladığı ÷ atanan`ı → bunların ortalaması | sayılmaz |
 
-Yapılacak tek şey: son yükleme yerine **tüm yüklemeleri** çekip kurum bazında zaman serisi çizmek.
+Belirsiz `avgCompletion` adı tamamen kaldırılır.
+
+**İkisi de öğretmen düzeyinden hesaplanır** — önce kişi, sonra ortalama. Sebebi `KULLANIM.md`'de: kurum ortalaması şube ortalamalarının ortalaması değildir, yoksa küçük bir şube sonucu orantısız sürükler. Bu, kuruma giden `kurum_raporu.py` raporuyla CRM ekranının **aynı sayıyı** göstermesini de garanti eder.
+
+> **Excel'den küçük bir sapma:** Excel'in "Genel Ortalama"sı satır düzeyinde ortalıyor. Öğretmenlere eşit sayıda eğitim atanmışsa iki sonuç birebir aynı; atama eşitsizse ayrışır. Bu yüzden `esitsiz_atama` sayısı da saklanır ve ekranda uyarı olarak gösterilir — sayı ayrıştığında sebebi görünür olur.
+
+Diğer tanımlar (`KULLANIM.md`'den, değişmeden):
+
+- **Öğretmen sayısı** = benzersiz e-posta. Ad-soyad kimlik değildir.
+- **Hiç başlamayan** = atanan eğitimlerin tamamında ilerleme %0
+- **Devam eden** = başlamış, hepsini bitirmemiş
+- **Tümünü tamamlayan** = atananların tamamı %100
+
+---
+
+## 3. Adım adım yapılacaklar
+
+Her adım ayrı branch + PR. Sıra bağımlılığa göre; her adım kendi başına çalışır durumda bırakır.
+
+### Adım 1 — Hesaplama katmanı
+
+`components/reports/` altında yeni bir modül: Excel satırlarından **kesit çıktısını** üretir.
+
+- Girdi: `Ad · Soyad · E-posta · Kurum · Şube · Eğitim · İlerleme (%) · Sertifika Tarihi`
+- Çıktı: kurum listesi + her kurum için şube/eğitim/sertifika-ay kırılımları — §1.1'deki kolonlara birebir karşılık gelen düz nesneler
+- Kimlik e-posta; ad-soyad **çıktıya hiç girmez**
+- Mükerrer (aynı öğretmen + aynı eğitim) satırlar birleştirilir, en yüksek ilerleme tutulur; birleştirilen adet raporlanır
+- `İlerleme (%)` ölçeği doğrulanır (0–1 mi 0–100 mü), belirsizse yükleme durdurulur
+
+**Doğrulama:** elle hesaplanabilir sentetik veriyle birim kontrolleri (mevcut 22 kontrolün yerini alır). Kaynak Excel'in GEN Koleji sayfasındaki sayılarla karşılaştırma — 120 öğretmen / 4 şube / 7 eğitim / %52,07 genel ortalama.
+
+### Adım 2 — Şema
+
+§1.1'deki `CREATE TABLE` bloğu + RLS politikaları kullanıcıya SQL olarak verilir, SQL Editor'de çalıştırılır, `supabase/migrations/` altına commit edilir. `types/database.ts` elle güncellenir (CLI yetkisi yok).
+
+### Adım 3 — Yükleme akışı
+
+- Excel seçilir → tarayıcıda Adım 1 çalışır → **önizleme**: kaç kurum, kaç öğretmen, kaç eğitim, hangi kurumlar okulla eşleşmedi
+- "Kaydet" → yalnızca sayılar yazılır (kesit + kurum + şube + eğitim + sertifika-ay)
+- Aynı `kesit_tarihi` varsa üzerine yazılır (cascade siler, yeniden yazar) — kullanıcı onaylar
+- Ham satırlar bellekte kalır, kaydedilmez; sayfa yenilenince gider
+
+**Bu adımda kaldırılanlar:** risk listesi, "Öğretmen Listesi (PDF)" butonu ve `teacher-list-view.tsx`.
+
+### Adım 4 — Kurum Karşılaştırma sekmesi
+
+Excel'in en çok kullanılan sayfası. Tüm kurumlar tek tabloda, sıralanabilir:
+
+`Kurum · Öğretmen · Şube · Eğitim · İlerleme Ort. · Tamamlanma Oranı · Sertifika · Sertifika Alan · Hiç Başlamayan · Tümünü Tamamlayan · Sözleşme Kapsamı`
+
+Tek SQL sorgusu; sıralama ve renk skalası TeacherX kimliğinde. PDF'e basılabilir. Sözleşme kapsamı `school_id` üzerinden `contracts.expected_teacher_count` ile gelir.
+
+### Adım 5 — Kurum Raporu sekmesi (mevcut panonun yeniden bağlanması)
+
+Bugünkü markalı kurum raporu yeni tablolardan okur. KPI'lar: Öğretmen · Atanan Eğitim · İlerleme Ortalaması · Tamamlanma Oranı · Sertifika · üç grup + halka + şube barları + eğitim tablosu. Risk listesi yok.
+
+### Adım 6 — Şube ve Eğitim Analizi sekmeleri
+
+Tüm kurumların şubeleri / eğitimleri tek tabloda, kurum filtresiyle. "Hiç Başlamayan %" sütununda renk skalası ters (yüksek = kırmızı).
+
+### Adım 7 — Aylık Takip sekmesi
+
+**Excel'de bu sayfa her ay elle kopyala-yapıştır gerektiriyor. CRM'de bedava** — her kesit zaten tarihli. Yapılacak tek şey tüm kesitleri çekip zaman serisi çizmek:
 
 ```sql
--- kurum başına aylık seri
-select u.uploaded_at, s.kurum, s.teacher_count, s.stats
-from report_kurum_stats s
-join report_uploads u on u.id = s.upload_id
-where u.format = 'kurs'
-order by u.uploaded_at;
+select k.kesit_tarihi, r.kurum_adi, r.ogretmen_sayisi,
+       r.ilerleme_ortalamasi, r.tamamlanma_orani, r.sertifika_sayisi
+from report_kurum r join report_kesit k on k.id = r.kesit_id
+where r.kurum_adi = $1
+order by k.kesit_tarihi;
 ```
 
-Ek olarak: aynı ay içinde birden fazla yükleme varsa **ayın son yüklemesi** o ayı temsil eder (kural netleştirilmeli).
+Kümülatif sertifika eğrisi `report_sertifika_ay`'dan gelir ve kayıt tutmaya başlamadan önceki geçmişi de gösterir.
 
-Kümülatif sertifika eğrisi `stats.sertifikaAylik`'ten gelir ve kayıt tutmaya başlamadan önceki geçmişi de gösterir — Excel'deki davranışın aynısı.
+### Adım 8 — "TÜMÜ" toplaması
+
+Kurum seçicisine "TÜMÜ" eklenir. Toplama **kurum ortalamalarının ortalaması değil**, öğretmen sayısıyla ağırlıklı olur — §2'deki kuralın gereği.
+
+### Adım 9 — Temizlik
+
+Eski `report_uploads` / `report_kurum_stats` tabloları ve onlara bağlı kod kaldırılır. "Veriyi Temizle" yerine iki ayrı işlem gelir: **bu kesiti sil** (varsayılan) ve **tüm geçmişi sil** (ayrı onay) — yoksa tek tıkla aylık trend kaybedilir.
 
 ---
 
-## 6. 🔴 KARAR 2 — Öğretmen Listesi ve Detayı: ham satır gerekir
+## 4. Öğretmen Özeti sekmesi ne olacak
 
-Excel'in iki sayfası (**Öğretmen Listesi**, **Öğretmen Detayı**) kişi bazlı. Bunlar için ham satırların saklanması gerekir:
+İkinci Excel formatı (`Adı Soyadı · Tamamlanan · Devam Eden · Tamamlama %`) aynı kesit yapısına yazar, ama eğitim adı ve sertifika bilgisi içermediği için `report_egitim` ve `report_sertifika_ay` boş kalır, `sertifika_sayisi` ve `egitim_sayisi` NULL olur.
 
-```
-ad, soyad, e-posta, kurum, şube, eğitim, ilerleme, sertifika tarihi
-```
-
-Bugün CRM bunları **bilerek saklamıyor** — yükleme tarayıcıda işleniyor, sunucuya yalnızca kurum bazlı sayısal özet gidiyor. Mevcut "Öğretmen Listesi" PDF'i yalnızca yükleme oturumunda üretilebiliyor, sayfa yenilenince kayboluyor.
-
-Üç seçenek:
-
-**A — Mevcut davranış korunur (en güvenli).** Öğretmen bazlı ekranlar CRM'e girmez; isimli liste yükleme anında PDF olarak alınır. Excel'in bu iki sayfası CRM'e taşınmaz.
-
-**B — Ham satırlar saklanır (tam işlevsellik).** `report_rows` tablosu geri gelir (v1'de vardı, v2'de kaldırıldı). Öğretmen Listesi ve Detayı CRM'de yaşar, geçmişe dönük kişi bazlı takip mümkün olur. Gerektirir:
-- RLS: yalnız admin + operasyon
-- Saklama süresi politikası (örn. son 3 kesit, gerisi silinir)
-- `KULLANIM.md`'deki taahhüdün gözden geçirilmesi — kurum raporu isimsiz kalmaya devam eder ama isimler artık DB'de durur
-- KVKK: aydınlatma metni ve saklama gerekçesi
-
-**C — Takma kimlikle saklanır (orta yol).** Ham satırlar e-postanın hash'iyle saklanır; isim ve e-posta DB'ye girmez. Kişi bazlı **eğilim** takibi mümkün olur ("bu kişi üç aydır ilerlemiyor"), ama kim olduğu CRM'den görülemez — isme ihtiyaç olduğunda o ayki Excel'den bakılır.
-
-**Karar gerekli.** Bu, planın en büyük çatalı: A seçilirse iş yükü belirgin şekilde azalır, B seçilirse Excel'in tamamı karşılanır.
+Ekranda bu kesitler "eğitim kırılımı yok" notuyla gösterilir. Aynı gün her iki format da yüklenirse kurs-bazlı olan kazanır (daha zengin).
 
 ---
 
-## 7. İş kırılımı
+## 5. Kapsam dışı
 
-Her iş ayrı branch + PR. Sıra bağımlılığa göre.
-
-| # | İş | Bağımlılık | Not |
-|---|---|---|---|
-| **1** | §2 metrik tanımlarının netleştirilmesi + `computeStatsByKurum` genişletilmesi (`genelOrtalama`, şube/eğitim ek sütunları, `sertifikaAylik`) | KARAR 1 | Şema değişikliği yok, sadece JSONB içeriği |
-| **2** | `report_kurum_eslestirme` tablosu + eşleştirme ekranı | — | SQL bloğu kullanıcıya verilir |
-| **3** | Kurum Karşılaştırma sekmesi | 1, 2 | En yüksek değer/en düşük risk — buradan başlanabilir |
-| **4** | Şube Analizi + Eğitim Analizi sekmeleri | 1 | Aynı bileşen ailesi |
-| **5** | Aylık Takip sekmesi | 1 | Şema değişikliği yok |
-| **6** | "TÜMÜ" toplaması | 1 | Ağırlıklı toplama kuralı |
-| **7** | Öğretmen Listesi / Detayı | KARAR 2 = B veya C | A seçilirse bu iş düşer |
-
-**Önerilen başlangıç:** İş 1 → İş 3. Kurum Karşılaştırma tek başına Excel'in en çok kullanılan sayfası ve mevcut veriyle üretilebiliyor.
+- **Öğretmen Listesi ve Öğretmen Detayı** — kişi bazlı bilgi saklanmayacağı için CRM'e girmiyor. Gerekirse kaynak Excel'den bakılır.
+- Risk listesi (isimli) — kaldırılıyor.
+- Excel çıktısı üretme — çıktı formatı PDF.
+- Excel'in renk skalalarının birebir taklidi — TeacherX kimliğindeki eşdeğerleri kullanılacak.
 
 ---
 
-## 8. Kapsam dışı
+## 6. Açık nokta
 
-- Excel'in renk skalaları birebir taklit edilmeyecek; TeacherX kimliğindeki (kırmızı vurgu) eşdeğerleri kullanılacak.
-- `Listeler` ve `Kılavuz` sayfalarının CRM karşılığı yok (açılır listeler veriden türüyor, tanımlar arayüzde ipucu olarak verilecek).
-- Excel'e geri yazma / Excel çıktısı üretme bu planda yok — çıktı formatı PDF.
-- `--onceki` / `--arsiv` karşılaştırmaları (`kurum_raporu.py`) ayrı iş; Aylık Takip bunun yerini kısmen tutar.
+**Kesit tarihi ne olacak?** İki seçenek: (a) yükleme günü otomatik, (b) kullanıcı elle girer. Excel'in `Sertifika Tarihi` dışında zaman bilgisi olmadığı için veri "yüklendiği güne" ait sayılıyor. Ay ortasında iki kez yüklenirse `unique (kesit_tarihi)` ikincisini üzerine yazar — aylık seride tek nokta kalır. Kullanıcı geçmişe dönük bir döküm yüklemek isterse (b) gerekir.
+
+**Öneri:** varsayılan yükleme günü, ama düzenlenebilir bir alan olarak gösterilsin. Uygulamada (b), pratikte (a).
