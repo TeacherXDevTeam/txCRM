@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Calendar, TrendingUp, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { LeadForm } from "@/components/leads/lead-form";
-import { STAGE_LABEL, SOURCE_LABEL } from "@/components/leads/lead-stage-config";
+import { SOURCE_LABEL } from "@/components/leads/lead-stage-config";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export interface LeadCardData {

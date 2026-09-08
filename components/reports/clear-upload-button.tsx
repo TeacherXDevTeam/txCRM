@@ -6,19 +6,30 @@ import { Trash2 } from "lucide-react";
 import { createReportClient } from "./report-client";
 
 interface Props {
+  /** Hangi rapor türü temizlenecek — diğer sekmenin verisine dokunulmaz. */
+  format: "ogretmen" | "kurs";
   rowCount: number;
+  /** Onay metnindeki birim, örn. "öğretmen" / "kurs kaydı". */
+  label: string;
 }
 
-export function ClearUploadButton({ rowCount }: Props) {
+export function ClearUploadButton({ format, rowCount, label }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
+  const tur = format === "ogretmen" ? "Öğretmen Özeti" : "Kurs Bazlı";
+
   async function handleClear() {
-    if (!confirm(`Tüm yüklenmiş rapor verisi (${rowCount.toLocaleString("tr-TR")} kayıt) silinsin mi?\nDashboard temizlenir, sonra yeni rapor yükleyebilirsin. Bu işlem geri alınamaz.`)) return;
+    const ok = confirm(
+      `"${tur}" raporundaki tüm veri (${rowCount.toLocaleString("tr-TR")} ${label}) silinsin mi?\n\n` +
+      `Diğer sekmedeki rapor etkilenmez. Bu işlem geri alınamaz.`
+    );
+    if (!ok) return;
+
     setBusy(true);
     const sb = createReportClient();
-    // Tüm yüklemeleri sil (eski/yetim kayıtlar dahil); report_kurum_stats cascade ile gider
-    const { error } = await sb.from("report_uploads").delete().gte("satir_sayisi", 0);
+    // Yalnızca bu türdeki yüklemeler; report_kurum_stats cascade ile gider
+    const { error } = await sb.from("report_uploads").delete().eq("format", format);
     setBusy(false);
     if (error) { alert("Silinemedi: " + error.message); return; }
     router.refresh();

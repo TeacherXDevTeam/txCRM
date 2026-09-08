@@ -22,7 +22,7 @@ interface MeetingFormProps {
   onClose:     () => void;
 }
 
-export function MeetingForm({ meeting, contacts, members, currentUserId, onClose }: MeetingFormProps) {
+export function MeetingForm({ meeting, contacts, currentUserId, onClose }: MeetingFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
@@ -85,7 +85,7 @@ export function MeetingForm({ meeting, contacts, members, currentUserId, onClose
   function toggleAttendee(id: string) {
     setAttendees((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }

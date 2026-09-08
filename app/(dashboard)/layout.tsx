@@ -37,11 +37,16 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar role={member.role} department={member.department} />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header user={member} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+    // print: yazdırırken h-screen/overflow kabuğu içeriği tek sayfaya kırpıyor → açılır
+    <div className="flex h-screen bg-gray-50 print:block print:h-auto print:overflow-visible print:bg-white">
+      <div className="print:hidden">
+        <Sidebar role={member.role} department={member.department} />
+      </div>
+      <div className="flex flex-col flex-1 overflow-hidden print:block print:overflow-visible">
+        <div className="print:hidden">
+          <Header user={member} />
+        </div>
+        <main className="flex-1 overflow-y-auto p-6 print:overflow-visible print:p-0">{children}</main>
       </div>
     </div>
   );

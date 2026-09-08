@@ -6,15 +6,9 @@ import * as XLSX from "xlsx";
 import { Upload, FileSpreadsheet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createReportClient, computeStatsByKurum, type CourseRow } from "./report-client";
+import { norm, num } from "./parse-utils";
 
 interface Props { currentUserId: string }
-
-function norm(s: string) {
-  return s.toString()
-    .replace(/[İIı]/g, "i").replace(/[Şş]/g, "s").replace(/[Çç]/g, "c")
-    .replace(/[Öö]/g, "o").replace(/[Üü]/g, "u").replace(/[Ğğ]/g, "g")
-    .toLowerCase().replace(/[^a-z0-9%]/g, "");
-}
 
 type Field = "ad" | "soyad" | "eposta" | "kurum" | "sube" | "kurs" | "ilerleme" | "sertifika";
 const MAP: Record<string, Field> = {
@@ -27,12 +21,6 @@ const MAP: Record<string, Field> = {
   ilerlemeyuzdesi: "ilerleme", ilerleme: "ilerleme", "tamamlama%": "ilerleme", tamamlamayuzde: "ilerleme", tamamlama: "ilerleme",
   sertifikaninalindigitarih: "sertifika", sertifikatarihi: "sertifika", sertifika: "sertifika",
 };
-
-function num(v: unknown): number {
-  if (typeof v === "number") return v;
-  const n = parseFloat(String(v ?? "").replace(",", ".").replace("%", "").trim());
-  return isNaN(n) ? 0 : n;
-}
 
 export function ReportUpload({ currentUserId }: Props) {
   const router = useRouter();
@@ -70,6 +58,10 @@ export function ReportUpload({ currentUserId }: Props) {
         }).filter((r) => r.eposta || r.ad);
 
         if (parsed.length === 0) { setError("Geçerli satır yok. Beklenen sütunlar: Ad, Soyad, E-posta, Kurum, Şube, Kurs, İlerleme Yüzdesi."); return; }
+        if (!parsed.some((r) => r.kurs)) {
+          setError("'Kurs' sütunu bulunamadı. Dosyanızda 'Tamamlanan' / 'Devam Eden' sütunları varsa bu bir öğretmen özeti raporudur — \"Öğretmen Özeti\" sekmesinden yükleyin.");
+          return;
+        }
         if (!parsed.some((r) => r.kurum)) { setError("'Kurum' sütunu bulunamadı. Bu rapor kurum bilgisi içermiyor."); return; }
 
         // % ölçek: 0-100 ise 0-1'e indir
@@ -91,7 +83,7 @@ export function ReportUpload({ currentUserId }: Props) {
 
     const { data: up, error: upErr } = await sb
       .from("report_uploads")
-      .insert({ uploaded_by: currentUserId, dosya_adi: fileName, satir_sayisi: rows.length })
+      .insert({ uploaded_by: currentUserId, dosya_adi: fileName, satir_sayisi: rows.length, format: "kurs" })
       .select("id").single();
     if (upErr || !up) { setError(upErr?.message ?? "Yükleme oluşturulamadı."); setBusy(false); return; }
 
@@ -108,7 +100,7 @@ export function ReportUpload({ currentUserId }: Props) {
   const teacherCount = new Set(rows.map((r: CourseRow) => r.eposta || r.ad)).size;
 
   return (
-    <div className="rounded-xl border bg-white p-5">
+    <div className="rounded-xl border bg-white p-5 print:hidden">
       <div className="flex items-center gap-2 mb-3">
         <Upload className="h-4 w-4 text-gray-400" />
         <h2 className="text-base font-semibold text-gray-900">Excel Rapor Yükle</h2>

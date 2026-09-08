@@ -56,7 +56,7 @@ export function MeetingsClient({ meetings, contacts, members, currentUserId, can
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }
@@ -184,7 +184,7 @@ export function MeetingsClient({ meetings, contacts, members, currentUserId, can
                       <p className="text-sm text-gray-400 italic">Not eklenmemiş.</p>
                     )}
                     <div>
-                      <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Todo'lar</p>
+                      <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Todo&apos;lar</p>
                       <TodoPanel
                         meetingId={m.id}
                         todos={m.todos}
