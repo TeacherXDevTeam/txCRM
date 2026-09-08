@@ -35,3 +35,39 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Yazdırma / PDF çıktısı (Raporlar → "PDF olarak indir")
+   Tailwind'in print: varyantı bileşenlerde kullanılır; buradakiler sayfa
+   düzeyinde, sınıf ile ifade edilemeyen kurallar.
+--------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm;
+  }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  /* Grafik renkleri ve rozet arka planları çıktıda da bassın */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Kartlar sayfa ortasından bölünmesin */
+  .print\:break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Recharts SVG'leri kapsayıcıyı taşmasın */
+  .recharts-wrapper,
+  .recharts-surface {
+    max-width: 100% !important;
+  }
+}

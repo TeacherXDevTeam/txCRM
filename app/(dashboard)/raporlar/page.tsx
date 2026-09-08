@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { ReportUpload } from "@/components/reports/report-upload";
-import { ReportDashboard } from "@/components/reports/report-dashboard";
-import { ClearUploadButton } from "@/components/reports/clear-upload-button";
+import { ReportsTabs, type UploadInfo } from "@/components/reports/reports-tabs";
 import type { KurumStats } from "@/components/reports/report-client";
+import type { TeacherKurumStats } from "@/components/reports/teacher-report-client";
 
 export const metadata = { title: "Raporlar — TeacherX CRM" };
 export const dynamic = "force-dynamic";
@@ -11,7 +10,7 @@ const normKurum = (s: string) => (s ?? "").toLowerCase().trim();
 
 export default async function RaporlarPage() {
   const supabase = createClient();
-  // report tabloları generated types'ta yok → tipsiz erişim
+  // report_* tabloları generated types'ta yok → tipsiz erişim (Faz 2 İş 1'de düzelecek)
   const sb = supabase as unknown as {
     from: (t: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
   };
@@ -30,21 +29,38 @@ export default async function RaporlarPage() {
     );
   }
 
-  // En son yükleme + satırları
-  const { data: uploads } = await sb.from("report_uploads")
-    .select("id, dosya_adi, uploaded_at, satir_sayisi")
-    .order("uploaded_at", { ascending: false }).limit(1);
-  const latest = (uploads ?? [])[0] as { id: string; dosya_adi: string | null; uploaded_at: string; satir_sayisi: number } | undefined;
+  // "format" kolonu canlıya henüz uygulanmadıysa sorgu hata verir → sessizce boş
+  // görünmek yerine kullanıcıya çalıştırması gereken SQL'i söyleriz.
+  let schemaError: string | null = null;
 
-  // Kurum özetleri (önceden hesaplanmış, küçük) — ham satır çekilmez
-  let kurumStats: { kurum: string; teacher_count: number; stats: KurumStats }[] = [];
-  if (latest) {
+  // Her format için en son yükleme + kurum özetleri (ham satır asla çekilmez)
+  async function loadLatest<T>(format: "ogretmen" | "kurs") {
+    const bos = { upload: null, kurumStats: [] as { kurum: string; teacher_count: number; stats: T }[] };
+
+    const { data: uploads, error: upErr } = await sb.from("report_uploads")
+      .select("id, dosya_adi, uploaded_at, satir_sayisi")
+      .eq("format", format)
+      .order("uploaded_at", { ascending: false })
+      .limit(1);
+    if (upErr) { schemaError = upErr.message; return bos; }
+
+    const upload = ((uploads ?? [])[0] as UploadInfo | undefined) ?? null;
+    if (!upload) return bos;
+
     const { data: statRows } = await sb.from("report_kurum_stats")
       .select("kurum, teacher_count, stats")
-      .eq("upload_id", latest.id)
+      .eq("upload_id", upload.id)
       .order("kurum");
-    kurumStats = (statRows ?? []) as { kurum: string; teacher_count: number; stats: KurumStats }[];
+    return {
+      upload,
+      kurumStats: (statRows ?? []) as { kurum: string; teacher_count: number; stats: T }[],
+    };
   }
+
+  const [teacher, course] = await Promise.all([
+    loadLatest<TeacherKurumStats>("ogretmen"),
+    loadLatest<KurumStats>("kurs"),
+  ]);
 
   // Sözleşmedeki "olması gereken öğretmen sayısı" → kurum (okul) adına göre
   const { data: contractData } = await sb.from("contracts")
@@ -59,27 +75,33 @@ export default async function RaporlarPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Raporlar</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Eğitim tamamlama raporunu yükle; kurum bazında otomatik özet, grafikler ve sözleşme karşılaştırması.
-          </p>
-        </div>
-        {latest && (
-          <ClearUploadButton rowCount={latest.satir_sayisi} />
-        )}
+      <div className="print:hidden">
+        <h1 className="text-2xl font-bold text-gray-900">Raporlar</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Platformdan aldığınız Excel&apos;i yükleyin; kurum bazında özet, grafikler ve sözleşme karşılaştırması otomatik çıkar.
+          Dosya tarayıcınızda işlenir, sunucuya yalnızca sayısal özet gider.
+        </p>
       </div>
 
-      <ReportUpload currentUserId={user?.id ?? ""} />
-
-      {kurumStats.length === 0 ? (
-        <div className="rounded-xl border border-dashed py-12 text-center text-sm text-gray-400">
-          Henüz yüklenmiş rapor yok. Yukarıdan bir Excel dosyası yükle.
+      {schemaError && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 print:hidden">
+          <p className="font-medium">Veritabanı güncellemesi bekliyor</p>
+          <p className="mt-1 text-xs">
+            Raporlar iki formata ayrıldı ama <code className="rounded bg-amber-100 px-1">report_uploads.format</code> kolonu
+            canlıya henüz uygulanmadı, bu yüzden mevcut raporlar listelenemiyor. Supabase → SQL Editor&apos;de
+            <code className="mx-1 rounded bg-amber-100 px-1">supabase/migrations/20260908000000_rapor_format_ayrimi.sql</code>
+            dosyasını çalıştırın.
+          </p>
+          <p className="mt-1 text-xs text-amber-700">Sunucu mesajı: {schemaError}</p>
         </div>
-      ) : (
-        <ReportDashboard kurumStats={kurumStats} expectedByKurum={expectedByKurum} uploadInfo={latest ?? null} />
       )}
+
+      <ReportsTabs
+        currentUserId={user?.id ?? ""}
+        expectedByKurum={expectedByKurum}
+        teacher={teacher}
+        course={course}
+      />
     </div>
   );
 }
