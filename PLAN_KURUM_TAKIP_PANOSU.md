@@ -53,21 +53,23 @@ create table report_kurum (
 
   ogretmen_sayisi       integer not null default 0,
   sube_sayisi           integer not null default 0,
-  egitim_sayisi         integer not null default 0,
+  egitim_sayisi         integer,                     -- NULL = özet dökümde bilinmiyor
   kayit_sayisi          integer not null default 0,  -- öğretmen × eğitim satır adedi
 
   ilerleme_ortalamasi   numeric(5,2) not null default 0,  -- %; kısmi ilerleme SAYILIR
   tamamlanma_orani      numeric(5,2) not null default 0,  -- %; kısmi SAYILMAZ
   tamamlanan_egitim     integer not null default 0,
 
-  sertifika_sayisi      integer not null default 0,
-  sertifika_alan        integer not null default 0,       -- en az 1 sertifikası olan öğretmen
+  sertifika_sayisi      integer,                          -- NULL = özet dökümde bilinmiyor
+  sertifika_alan        integer,                          -- en az 1 sertifikası olan öğretmen
 
   hic_baslamayan        integer not null default 0,
   devam_eden            integer not null default 0,
   tumunu_tamamlayan     integer not null default 0,
 
   esitsiz_atama         integer not null default 0,       -- bkz. §2
+  kaynak                text not null default 'detayli'
+                        check (kaynak in ('detayli','ozet')),  -- bkz. §4
   created_at            timestamptz not null default now(),
   unique (kesit_id, kurum_adi)
 );
@@ -78,10 +80,10 @@ create table report_sube (
   kurum_id            uuid not null references report_kurum(id) on delete cascade,
   sube_adi            text not null,
   ogretmen_sayisi     integer not null default 0,
-  egitim_sayisi       integer not null default 0,
+  egitim_sayisi       integer,                          -- NULL = özet dökümde bilinmiyor
   ilerleme_ortalamasi numeric(5,2) not null default 0,
   tamamlanma_orani    numeric(5,2) not null default 0,
-  sertifika_sayisi    integer not null default 0,
+  sertifika_sayisi    integer,                          -- NULL = özet dökümde bilinmiyor
   hic_baslamayan      integer not null default 0,
   devam_eden          integer not null default 0,
   tumunu_tamamlayan   integer not null default 0,
@@ -113,7 +115,9 @@ create table report_sertifika_ay (
 
 **Kurum ↔ okul köprüsü.** `school_id` doğrudan `report_kurum` üzerinde. İlk yüklemede ada göre otomatik eşleşir; eşleşmeyenler ekranda "eşleştirme bekliyor" listesine düşer, kullanıcı dropdown'dan seçer. Eşleştirme bir kez yapılır ve sonraki kesitlere ada göre taşınır. Bu köprü kurulunca rapor verisi sözleşme, atama, lead ve toplantı verisiyle aynı okul üzerinden birleşir.
 
-**RLS:** dört tabloda da mevcut desen — `get_my_role() = 'admin' OR department = 'operasyon'`.
+**NULL kullanımı bilinçli.** Özet dökümde üretilemeyen alanlar sıfır değil `NULL` tutulur — "sertifika yok" ile "sertifika bilgisi yok" farklı şeylerdir ve ortalama alırken karıştırılmamalıdır. `kaynak` kolonu kesitin hangi dökümden geldiğini söyler.
+
+**RLS:** beş tabloda da mevcut desen — `get_my_role() = 'admin' OR department = 'operasyon'`.
 
 ### 1.2 Eski tabloların akıbeti
 
