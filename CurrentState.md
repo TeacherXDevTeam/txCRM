@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-08
 
+### Son İşlem — Kurum Takip: Adım 1 + Kurum Karşılaştırma (2026-09-08)
+Kesit hesaplama katmanı (`kesit.ts`) ve Excel okuyucu (`kesit-parse.ts`) yazıldı; Raporlar'a "Kurum Takip" sekmesi eklendi (Kurum Karşılaştırma tablosu + kurum detay raporu). Kişisel veri tip düzeyinde dışarıda: `HamSatir`'da ad-soyad yok, çıktı tiplerinde kişiye ait tek alan yok — 8.294 satırlık girdi 9 KB'lık sayı özetine iniyor, içinde tek `@` bile yok. Kaynak Excel'in kendi hesapladığı 30 değerle karşılaştırıldı: 29'u birebir, 1'i (BİLNET tamamlanma oranı, %78,93 vs %78,96) planda öngörülen öğretmen-düzeyi/satır-düzeyi farkı — atama eşitsizliği olan tek kurum orası. Parser tüm sayfaları tarıyor (takip panosunda "Ham Veri" 9. sayfa). **Kaydetme henüz yok** — Adım 2 (şema) bekliyor.
+
 ### Son İşlem — Kurum Eğitim Takip Panosu Planı v2 (2026-09-08)
 `TeacherX_Kurum_Egitim_Takip_Panosu.xlsx` incelendi; `PLAN_KURUM_TAKIP_PANOSU.md` kullanıcı yönlendirmesiyle yeniden yazıldı. Temel ilke: **girdi değil, üretilen çıktı saklanır** — kişi bazlı hiçbir bilgi (ad, e-posta, kişi ilerlemesi) DB'ye yazılmaz, rapora girmez; risk listesi ve isimli Öğretmen Listesi PDF'i kaldırılacak. JSONB blob yerine gerçek kolonlu 5 tablo (`report_kesit`, `report_kurum`, `report_sube`, `report_egitim`, `report_sertifika_ay`) — üretimde JSONB şema kayması çöktürmüştü ve kurumlar arası sorgu SQL'e inemiyordu. Belirsiz `avgCompletion` yerine iki ayrı metrik: `ilerleme_ortalamasi` (kısmi sayılır) ve `tamamlanma_orani` (sayılmaz), ikisi de öğretmen düzeyinden. 9 adımlık iş sırası çıkarıldı; onay bekliyor.
 
