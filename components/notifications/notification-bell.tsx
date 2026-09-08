@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, Check, CheckCheck } from "lucide-react";
 import { createNotifClient, type AppNotification } from "./notif-client";
+import { formatDateTime } from "@/lib/utils";
 
 interface Props {
   memberId: string;
@@ -125,7 +126,7 @@ export function NotificationBell({ memberId }: Props) {
                     <p className="font-medium text-gray-900">{n.title}</p>
                     {n.body && <p className="text-gray-600">{n.body}</p>}
                     <p className="mt-0.5 text-[11px] text-gray-400">
-                      {new Date(n.created_at).toLocaleString("tr-TR")}
+                      {formatDateTime(n.created_at)}
                     </p>
                   </button>
                   {!n.is_read && (

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Select } from "@/components/ui/select";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { YazdirButonu } from "./print-button";
 import type { KurumStats } from "./report-client";
 import {
@@ -39,7 +40,7 @@ export function ReportDashboard({ kurumStats, expectedByKurum, uploadInfo }: Pro
     tumunuTamamlayan: s.fullyCompleted,
   };
   const yuzde = (n: number) => (s.teacherCount ? Math.round((n / s.teacherCount) * 100) : 0);
-  const tarih = new Date(uploadInfo?.uploaded_at ?? Date.now()).toLocaleDateString("tr-TR");
+  const tarih = formatDate(uploadInfo?.uploaded_at ?? new Date());
 
   return (
     <div className="overflow-hidden rounded-lg border border-tx-cizgi bg-tx-kagit font-govde text-tx-metin print:rounded-none print:border-0">
@@ -71,7 +72,7 @@ export function ReportDashboard({ kurumStats, expectedByKurum, uploadInfo }: Pro
         </div>
         {uploadInfo && (
           <p className="mt-2 text-[11.5px] text-tx-gri">
-            Kaynak: {uploadInfo.dosya_adi} · {new Date(uploadInfo.uploaded_at).toLocaleString("tr-TR")} ·{" "}
+            Kaynak: {uploadInfo.dosya_adi} · {formatDateTime(uploadInfo.uploaded_at)} ·{" "}
             {tr(uploadInfo.satir_sayisi)} kayıt
           </p>
         )}

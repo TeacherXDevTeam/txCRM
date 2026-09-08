@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-08
 
+### Son İşlem — Hotfix: Raporlar'da hydration çökmesi (2026-09-08)
+Deploy sonrası `/raporlar` "Application error: a client-side exception has occurred" veriyordu. Sebep: tarihler `toLocaleString("tr-TR")` ile timeZone verilmeden biçimleniyordu — Vercel sunucuları UTC, tarayıcı UTC+3 → SSR ve client farklı metin üretiyor → React #425/#418/#423. Yerelde görünmüyordu çünkü geliştirme makinesi de UTC+3. `lib/utils.ts`'e `TR_TZ` + `formatDateTime` eklendi, tüm tarih biçimlemeleri `Europe/Istanbul`a sabitlendi (raporlar, bildirim zili, ekip). `TZ=UTC` prodüksiyon build'i + UTC+3 tarayıcıyla yeniden üretildi ve doğrulandı: konsol temiz.
+
 ### Son İşlem — Raporlar: TeacherX Rapor Kimliği + Gizlilik Ayrımı (2026-09-08)
 Raporlar sayfası `kurum_raporu.py` çıktılarının görünümüne geçirildi: siyah üst şerit, marka paleti (`#E70917`/`#101010`/`#F4F2EE`), Poppins başlık + Inter gövde, üstten çizgili KPI kartları, halka grafik, yatay şube barları, sütun dağılımı, satır içi barlı tablolar. Grafikler saf SVG/CSS — recharts kaldırıldı, `/raporlar` 236 kB → 124 kB. **Gizlilik:** KULLANIM.md'nin "kurum raporu isim içermez" kuralı uygulandı — çıktı ikiye ayrıldı (`data-print="kurum"` isimsiz / `data-print="liste"` isimli). Öğretmen listesi yalnızca oturum belleğindeki ham satırlardan üretilir, DB'ye yazılmaz.
 
