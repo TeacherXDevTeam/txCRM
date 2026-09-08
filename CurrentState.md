@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-08
 
+### Son İşlem — Kurum Takip: Şube ve Eğitim Analizi (2026-09-08)
+Planın Adım 6'sı yapıldı. Kurum Takip sekmesine iç sayfa çubuğu eklendi: **Kurum Karşılaştırma · Şube Analizi · Eğitim Analizi**; kurum adına tıklayınca o kurumun markalı raporu açılıyor. Şube Analizi tüm kurumların şubelerini tek tabloda gösteriyor (kurum filtresi, sıralanabilir, "Hiç Başlamayan %" ters renk skalası). Eğitim Analizi eğitimleri kurumlar arası topluyor, en düşük tamamlanma üstte. Özet dökümde eğitim adı olmadığı için Eğitim Analizi açıklayıcı bir boş durum gösteriyor — detaylı döküm isteniyor. Sentetik veriyle iki formatta da doğrulandı.
+
 ### Son İşlem — Kurum Takip: iki döküm formatı (2026-09-08)
 Kullanıcı platformdan hem detaylı (Eğitim sütunlu) hem özet (Tamamlanan/Devam Eden sütunlu) döküm alabildiğini belirtti. Kesit modeli ikisini de kabul edecek şekilde genişletildi; format sütun başlıklarından otomatik anlaşılıyor, kullanıcı bir şey seçmiyor. Özet dökümde üretilemeyen alanlar (`egitimSayisi`, `sertifikaSayisi`, `sertifikaAlan`) tip düzeyinde `number | null` — ekranda "—" gösteriliyor, sıfır uydurulmuyor. Her iki format Node'da test edildi: detaylı döküm GEN Koleji'nde Excel'le birebir, özet döküm sentetik veriyle çalışıyor, ikisinin de çıktısında kişisel veri yok.
 

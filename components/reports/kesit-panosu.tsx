@@ -7,6 +7,8 @@ import { Select } from "@/components/ui/select";
 import { excelOku, SUTUNLAR_DETAYLI, SUTUNLAR_OZET } from "./kesit-parse";
 import { kesitUret, kesitUretOzet, type Kesit, type KesitKurum } from "./kesit";
 import { KesitKarsilastirma } from "./kesit-karsilastirma";
+import { KesitSubeAnalizi } from "./kesit-sube-analizi";
+import { KesitEgitimAnalizi } from "./kesit-egitim-analizi";
 import { YazdirButonu } from "./print-button";
 import {
   UstSerit, RaporBasligi, Bolum, Pano, Kpi, Halka, YatayBarlar,
@@ -14,7 +16,14 @@ import {
 } from "./brand";
 import { formatDate } from "@/lib/utils";
 
-type Gorunum = { tip: "karsilastirma" } | { tip: "kurum"; kurumAdi: string };
+type Sayfa = "karsilastirma" | "sube" | "egitim";
+type Gorunum = { tip: Sayfa } | { tip: "kurum"; kurumAdi: string };
+
+const SAYFALAR: { key: Sayfa; ad: string }[] = [
+  { key: "karsilastirma", ad: "Kurum Karşılaştırma" },
+  { key: "sube",          ad: "Şube Analizi" },
+  { key: "egitim",        ad: "Eğitim Analizi" },
+];
 
 export function KesitPanosu() {
   const [kesit, setKesit] = useState<Kesit | null>(null);
@@ -143,24 +152,49 @@ export function KesitPanosu() {
         />
       ) : (
         <>
-          <div className="ic-arac flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-baslik text-lg font-semibold text-tx-metin">Kurum Karşılaştırma</h2>
-              <p className="text-[12.5px] text-tx-gri">
-                Başlığa tıklayarak sıralayın · kurum adına tıklayarak detaya gidin
-              </p>
+          {/* iç sayfa çubuğu — Excel'in analiz sayfalarının karşılığı */}
+          <div className="ic-arac flex flex-wrap items-center justify-between gap-3 border-b border-tx-cizgi">
+            <div className="flex gap-1">
+              {SAYFALAR.map((sf) => {
+                const aktif = gorunum.tip === sf.key;
+                return (
+                  <button
+                    key={sf.key}
+                    onClick={() => setGorunum({ tip: sf.key })}
+                    className={`-mb-px border-b-2 px-3.5 py-2 font-baslik text-[13.5px] font-medium transition-colors ${
+                      aktif ? "border-tx-kirmizi text-tx-metin"
+                            : "border-transparent text-tx-gri hover:border-tx-cizgi hover:text-tx-metin"
+                    }`}
+                  >
+                    {sf.ad}
+                  </button>
+                );
+              })}
             </div>
-            <div className="w-72">
+            <div className="w-72 pb-2">
               <Select value="" onChange={(e) => e.target.value && setGorunum({ tip: "kurum", kurumAdi: e.target.value })}>
-                <option value="">Kurum detayına git…</option>
+                <option value="">Kurum raporuna git…</option>
                 {kesit.kurumlar.map((k) => <option key={k.kurumAdi} value={k.kurumAdi}>{k.kurumAdi}</option>)}
               </Select>
             </div>
           </div>
-          <KesitKarsilastirma
-            kurumlar={kesit.kurumlar}
-            onKurumSec={(kurumAdi) => setGorunum({ tip: "kurum", kurumAdi })}
-          />
+
+          {gorunum.tip === "karsilastirma" && (
+            <>
+              <div className="ic-arac">
+                <h2 className="font-baslik text-lg font-semibold text-tx-metin">Kurum Karşılaştırma</h2>
+                <p className="text-[12.5px] text-tx-gri">
+                  Başlığa tıklayarak sıralayın · kurum adına tıklayarak o kurumun raporuna gidin
+                </p>
+              </div>
+              <KesitKarsilastirma
+                kurumlar={kesit.kurumlar}
+                onKurumSec={(kurumAdi) => setGorunum({ tip: "kurum", kurumAdi })}
+              />
+            </>
+          )}
+          {gorunum.tip === "sube" && <KesitSubeAnalizi kurumlar={kesit.kurumlar} />}
+          {gorunum.tip === "egitim" && <KesitEgitimAnalizi kurumlar={kesit.kurumlar} />}
         </>
       )}
     </div>
