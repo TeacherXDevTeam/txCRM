@@ -40,7 +40,9 @@ export function ReportDashboard({ kurumStats, expectedByKurum, uploadInfo }: Pro
     tumunuTamamlayan: s.fullyCompleted,
   };
   const yuzde = (n: number) => (s.teacherCount ? Math.round((n / s.teacherCount) * 100) : 0);
-  const tarih = formatDate(uploadInfo?.uploaded_at ?? new Date());
+  // uploadInfo her zaman dolu (stats yalnızca yükleme varsa çekilir); yine de
+  // render'da new Date() kullanmıyoruz — sunucu/istemci farkı yaratır.
+  const tarih = uploadInfo ? formatDate(uploadInfo.uploaded_at) : "—";
 
   return (
     <div className="overflow-hidden rounded-lg border border-tx-cizgi bg-tx-kagit font-govde text-tx-metin print:rounded-none print:border-0">
