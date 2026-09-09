@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — "Eşleştirmeyi düzelt" kayıtlı kesitte tıklanamıyordu (2026-09-09)
+Kullanıcıya "Raporlar → Eşleştirme" yolunu tarif ederken kontrol edince düğmenin `kayitliMi` ile devre dışı bırakıldığı görüldü: kayıtlı bir kesit varken — yani sayfa her açıldığında — tıklanamıyordu. Yanlış bir eşleştirmeyi düzeltmenin tek yolu Excel'i yeniden yüklemek oluyordu, ki düzeltme turunun tamamı bunun üzerine kuruluydu. Düğme artık yalnız kaydetme sırasında kapanıyor ve kayıtlıyken "Eşleştirmeyi düzelt" yazıyor. Yeniden kaydetmek zararsız: aynı tarihli kesit silinip yazılıyor. Uçtan uca tarayıcıda doğrulandı: kayıtlı kesitle sayfa açıldı, düğme etkin, tıklayınca çakışma uyarısıyla ekran açıldı, süzgeç iki çakışan kurumu bıraktı, yanlış eşleşme düzeltilince uyarı kayboldu ve "dikkat isteyenler" sayacı 0'a düştü.
+
 ### Son İşlem — Eşleştirmede arama + "yalnız dikkat isteyenler" süzgeci (2026-09-09)
 Çakışmaları göstermek yetmiyordu; 92 satırlık tabloda o kurumları bulmak hâlâ zahmetliydi. Eklendi: kurum/okul adı araması ve tek tıkla süzgeç. "Dikkat isteyen" = çakışan (aynı okula 2 kurum) + şüpheli + ilk kez görülen. Şüpheli tanımı yeni bir saf fonksiyonla geliyor (`eslesmeSupheliMi`): rapordaki ad ile bağlandığı okulun adı arasında TEK ortak ayırt edici kelime yoksa işaretlenir — "Amerikan Kültür Kolejleri Genel Merkezi" ↔ "ALKEV" tam böyle yakalanıyor, {amerikan,kultur,genel,merkezi} ∩ {alkev} = ∅. Karar değil işaret; "AÇI Okulları Tuzla" ↔ "AÇI Okulları" gibi meşru farklar işaretlenmiyor. 10 birim kontrolü; biri düştü ve KOD haklı çıktı (adı yalnız jenerik kelimelerden oluşan eşleşme gerçekten insana bakılmalı), beklenti düzeltildi. Tarayıcıda 63 satırlık senaryo 3 satıra indi, arama "amerikan" ile tek satır bıraktı. Böylece düzeltme turu için SQL çalıştırmaya gerek kalmıyor.
 

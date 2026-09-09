@@ -219,12 +219,18 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
                   className="h-9 rounded-md border border-tx-cizgi bg-white px-3 text-sm"
                 />
               </div>
+              {/*
+                kayitliMi ile KAPATILMAZ. Kayıtlı bir kesit varken eşleştirmeyi
+                düzeltmek tam da gereken şey; kapatılırsa kullanıcı yanlış bir
+                eşleştirmeyi ancak Excel'i yeniden yükleyerek düzeltebilir.
+                Yeniden kaydetmek zararsız: aynı tarihli kesit silinip yazılır.
+              */}
               <button
                 onClick={() => { setKayitHatasi(null); setAtlandiBilgisi(null); setEslestirmede(true); }}
-                disabled={kayitliMi || kaydediliyor}
+                disabled={kaydediliyor}
                 className="h-9 rounded-md border border-tx-cizgi bg-white px-3 text-sm text-tx-gri hover:text-tx-metin disabled:opacity-50"
               >
-                Eşleştirme
+                {kayitliMi ? "Eşleştirmeyi düzelt" : "Eşleştirme"}
               </button>
               <Button onClick={kaydetmeyeBasla} disabled={kayitliMi || kaydediliyor}>
                 {kaydediliyor ? "Kaydediliyor..." : kayitliMi ? "Kaydedildi" : "Kaydet"}
