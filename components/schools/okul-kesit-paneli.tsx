@@ -86,6 +86,49 @@ export function OkulKesitPaneli({
 }: { okulAdi: string; noktalar: OkulKesitNoktasi[]; subeler: OkulKesitSubesi[] }) {
   if (noktalar.length === 0) return null;
 
+  /*
+   * Aynı kesitte BİRDEN ÇOK kurum bu okula bağlıysa bunlar zaman serisi
+   * değildir — eşleştirme hatasıdır. Önceki sürüm satırları tarihe bakmadan
+   * sıralayıp "2 kesit" sanıyor ve iki ayrı kurumun farkını "değişim" diye
+   * gösteriyordu (ALKEV sayfasında +1.328 öğretmen, −23,6 puan çıktı).
+   * Böyle bir durumda sayı üretmek yanlış; hatayı göstermek doğru.
+   */
+  const kesitBasina = new Map<string, OkulKesitNoktasi[]>();
+  for (const n of noktalar) {
+    const liste = kesitBasina.get(n.tarih);
+    if (liste) liste.push(n); else kesitBasina.set(n.tarih, [n]);
+  }
+  const cakisanTarih = [...kesitBasina.entries()].find(([, l]) => l.length > 1);
+
+  if (cakisanTarih) {
+    const [tarih, cakisanlar] = cakisanTarih;
+    return (
+      <section className="bg-white rounded-xl border border-red-200 p-5">
+        <h2 className="text-base font-semibold text-gray-900">Eğitim Tamamlama</h2>
+        <p className="mt-1 text-sm text-red-700">
+          Bu okula {formatDate(tarih)} kesitinde <b>{tr(cakisanlar.length)} ayrı kurum</b> bağlı
+          görünüyor. Bu bir eşleştirme hatası — sayılar birleştirilirse yanıltıcı olacağı için
+          gösterilmiyor.
+        </p>
+        <div className="mt-3 space-y-1.5">
+          {cakisanlar.map((c) => (
+            <div key={c.kurumAdi} className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2">
+              <span className="min-w-0 truncate text-sm text-gray-800">{c.kurumAdi}</span>
+              <span className="shrink-0 text-xs text-gray-500">
+                {tr(c.ogretmenSayisi)} öğr. · %{tr1(c.ilerlemeOrtalamasi)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
+          Düzeltmek için Raporlar → &quot;Eşleştirme&quot;den bu kurumlardan yalnızca birini bu okula
+          bağlı bırakın; diğerini doğru okula bağlayın ya da yeni okul olarak ekleyin.{" "}
+          <Link href="/raporlar" className="underline hover:text-gray-600">Raporlar</Link>
+        </p>
+      </section>
+    );
+  }
+
   const son = noktalar[noktalar.length - 1];
   const onceki = noktalar.length > 1 ? noktalar[noktalar.length - 2] : null;
   const adFarkli = son.kurumAdi.trim() !== okulAdi.trim();

@@ -28,3 +28,26 @@ select
   count(*) filter (where coalesce(city,'') = '')        as sehri_bos,
   count(*) filter (where city = 'Belirtilmedi')         as sehri_belirtilmedi
 from schools;
+
+-- 4) ÇAKIŞAN EŞLEŞTİRMELER — aynı okula birden çok kurum bağlıysa hatadır.
+--    O okulun detay sayfasında iki kurumun verisi üst üste biner.
+select s.name as okul_adi,
+       count(*) as bagli_kurum_sayisi,
+       string_agg(r.kurum_adi, '  |  ' order by r.ogretmen_sayisi desc) as kurumlar
+from report_kurum r
+join report_kesit k on k.id = r.kesit_id
+join schools s on s.id = r.school_id
+where k.kesit_tarihi = (select max(kesit_tarihi) from report_kesit)
+group by s.id, s.name
+having count(*) > 1
+order by count(*) desc, s.name;
+
+-- 5) Adı birbirine hiç benzemeyen eşleşmeler — gözle taranacak liste.
+--    Rapordaki ad ile CRM'deki okul adının ilk kelimeleri tutmuyorsa şüphelidir.
+select s.name as crm_okul_adi, r.kurum_adi as rapordaki_ad, r.ogretmen_sayisi
+from report_kurum r
+join report_kesit k on k.id = r.kesit_id
+join schools s on s.id = r.school_id
+where k.kesit_tarihi = (select max(kesit_tarihi) from report_kesit)
+  and lower(split_part(s.name, ' ', 1)) <> lower(split_part(r.kurum_adi, ' ', 1))
+order by r.ogretmen_sayisi desc;

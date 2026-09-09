@@ -125,6 +125,9 @@ export function trendKur(
   // anahtar → kurum. Aynı kurumun adı kesitler arasında değişse bile
   // school_id aynıysa tek seri olur.
   const kurumlar = new Map<string, TrendKurum>();
+  // anahtar → adın alındığı kesit sırası. Satırlar tarih sırasında gelmediği
+  // için "son satır kazansın" demek yanlış ad gösterir.
+  const adSirasi = new Map<string, number>();
 
   for (const r of kurumSatirlari) {
     const i = sira.get(r.kesit_id);
@@ -143,8 +146,14 @@ export function trendKur(
       kurumlar.set(anahtar, kurum);
     }
     kurum.hucreler[i] = satiriHucreyeCevir(r);
-    // En son kesitteki adı tut — kurum adı zamanla düzeltilmiş olabilir
-    kurum.kurumAdi = r.kurum_adi;
+    // En son KESİTTEKİ adı tut — kurum adı zamanla düzeltilmiş olabilir.
+    // Ölçüt satır sırası değil kesit sırası; `kurumSatirlari` tarihe göre
+    // sıralı gelmiyor (sorgu kesit_id'ye göre sıralıyor, o da UUID).
+    const oncekiSira = adSirasi.get(anahtar);
+    if (oncekiSira === undefined || i > oncekiSira) {
+      kurum.kurumAdi = r.kurum_adi;
+      adSirasi.set(anahtar, i);
+    }
     kesitler[i].kurumSayisi++;
   }
 
