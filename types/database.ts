@@ -204,6 +204,7 @@ export interface Database {
           description: string | null;
           category: "yapay_zeka" | "olumlu_okul_iklimi" | "etkili_ogretmenlik" | "diger";
           format: "yuz_yuze" | "cevrimici" | "hibrit";
+          default_trainer_id: string | null;
           duration_hours: number | null;
           status: "aktif" | "pasif" | "gelistirme";
           created_at: string;
@@ -214,6 +215,7 @@ export interface Database {
           description?: string | null;
           category?: "yapay_zeka" | "olumlu_okul_iklimi" | "etkili_ogretmenlik" | "diger";
           format?: "yuz_yuze" | "cevrimici" | "hibrit";
+          default_trainer_id?: string | null;
           duration_hours?: number | null;
           status?: "aktif" | "pasif" | "gelistirme";
         };
@@ -223,6 +225,7 @@ export interface Database {
           description?: string | null;
           category?: "yapay_zeka" | "olumlu_okul_iklimi" | "etkili_ogretmenlik" | "diger";
           format?: "yuz_yuze" | "cevrimici" | "hibrit";
+          default_trainer_id?: string | null;
           duration_hours?: number | null;
           status?: "aktif" | "pasif" | "gelistirme";
         };
@@ -661,18 +664,21 @@ export interface Database {
           uploaded_by: string | null;
           dosya_adi: string | null;
           satir_sayisi: number;
+          format: "kurs" | "ogretmen";
           uploaded_at: string;
         };
         Insert: {
           uploaded_by?: string | null;
           dosya_adi?: string | null;
           satir_sayisi?: number;
+          format?: "kurs" | "ogretmen";
         };
         Relationships: [];
         Update: {
           uploaded_by?: string | null;
           dosya_adi?: string | null;
           satir_sayisi?: number;
+          format?: "kurs" | "ogretmen";
         };
       };
       report_kurum_stats: {

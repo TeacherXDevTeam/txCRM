@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Faz 2 İş 1 yeniden (2026-09-09)
+Kapatılan PR #11 çakışma yüzünden kapatılmıştı; eski dalı diriltmek yerine güncel `main`'den temiz baştan yapıldı. Kapsam bu arada küçüldü: `report-client.ts` ve eski `raporlar/page.tsx` #15'te zaten silindi/yeniden yazıldı. Kalan gerçek iş — `types/database.ts`'e `report_uploads.format` ve `trainings.default_trainer_id`; `notif-client.ts` paylaşılan typed client'a bağlandı; `okullar/page.tsx`'teki tipsiz `sb` ve gereksiz cast'ler, `contract-form.tsx`'teki `as never`/`as any` kaldırıldı. Dokunulan dört dosyada sıfır cast, sıfır uyarı. Kalan 35 uyarı planın kapsam dışı bıraktığı eski modüllerde.
+
 ### Son İşlem — Eski sekmeler kaldırıldı + Kurum Dağılımı grafiği (2026-09-09)
 Adım 9'un kod tarafı yapıldı: "Öğretmen Özeti" ve "Kurs Bazlı" sekmeleri ve onlara bağlı 9 dosya silindi (Kurum Takip zaten iki formatı da okuyor). `/raporlar` 132 kB → 124 kB, First Load 294 → 220 kB. Tablolar henüz durup Adım 3 doğrulanınca düşecek. Yeni **Kurum Dağılımı** grafiği: 92 kurum tek SVG'de, yatayda öğretmen sayısı (log), dikeyde ilerleme; ağırlıklı ortalama çizgisi ve "ortalamanın altındaki en büyük kurumlar" kısayolu. Google Charts tercih edilmedi (gstatic bağımlılığı, PDF riski, sayfa ağırlığı). Grafik yazarken bir hydration hatası çıktı ve düzeltildi: SVG `<title>` içine çok çocuklu JSX konulunca React sunucuda `<!-- -->` ekliyor, tarayıcı `<title>`'ı ham metin ayrıştırdığı için bunu metin sayıyor ve hydration çöküyordu — tek metin düğümüne çevrildi. TZ=UTC prodüksiyon build'iyle doğrulandı: konsol temiz.
 
