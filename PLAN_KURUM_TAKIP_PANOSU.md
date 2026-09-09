@@ -214,7 +214,9 @@ Kurum seçicisine "TÜMÜ" eklenir. Toplama **kurum ortalamalarının ortalamas�
 
 ### Adım 9 — Temizlik
 
-Eski `report_uploads` / `report_kurum_stats` tabloları ve onlara bağlı kod kaldırılır. "Veriyi Temizle" yerine iki ayrı işlem gelir: **bu kesiti sil** (varsayılan) ve **tüm geçmişi sil** (ayrı onay) — yoksa tek tıkla aylık trend kaybedilir.
+**Kod tarafı 2026-09-09'da yapıldı:** eski "Öğretmen Özeti" ve "Kurs Bazlı" sekmeleri ve onlara bağlı 9 dosya kaldırıldı; Raporlar sayfası tek işe (Kurum Takip) indi. Kurum Takip iki formatı da okuduğu için işlev kaybı yok, aynı veriyi farklı hesapla gösteren ikinci bir ekran da kalmadı.
+
+**Tablolar henüz DURUYOR.** `report_uploads` / `report_kurum_stats` silinmedi — Adım 3 (kaydetme) çalıştığı doğrulanana kadar veri kaybı riski alınmıyor. Sonra ayrı bir `DROP TABLE` migration'ı ile kaldırılacak. "Veriyi Temizle" yerine iki ayrı işlem gelir: **bu kesiti sil** (varsayılan) ve **tüm geçmişi sil** (ayrı onay) — yoksa tek tıkla aylık trend kaybedilir.
 
 ---
 

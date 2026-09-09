@@ -2,6 +2,12 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Eski sekmeler kaldırıldı + Kurum Dağılımı grafiği (2026-09-09)
+Adım 9'un kod tarafı yapıldı: "Öğretmen Özeti" ve "Kurs Bazlı" sekmeleri ve onlara bağlı 9 dosya silindi (Kurum Takip zaten iki formatı da okuyor). `/raporlar` 132 kB → 124 kB, First Load 294 → 220 kB. Tablolar henüz durup Adım 3 doğrulanınca düşecek. Yeni **Kurum Dağılımı** grafiği: 92 kurum tek SVG'de, yatayda öğretmen sayısı (log), dikeyde ilerleme; ağırlıklı ortalama çizgisi ve "ortalamanın altındaki en büyük kurumlar" kısayolu. Google Charts tercih edilmedi (gstatic bağımlılığı, PDF riski, sayfa ağırlığı). Grafik yazarken bir hydration hatası çıktı ve düzeltildi: SVG `<title>` içine çok çocuklu JSX konulunca React sunucuda `<!-- -->` ekliyor, tarayıcı `<title>`'ı ham metin ayrıştırdığı için bunu metin sayıyor ve hydration çöküyordu — tek metin düğümüne çevrildi. TZ=UTC prodüksiyon build'iyle doğrulandı: konsol temiz.
+
+### Son İşlem — Sekme değişiminde kesit kaybolması düzeltildi (2026-09-09)
+Kurum Takip'e dosya yüklendikten sonra başka sekmeye geçip dönünce veriler siliniyordu: `KesitPanosu` koşullu render ediliyordu, React bileşeni söküyor ve state'i onunla gidiyordu. Kesit henüz DB'ye yazılmadığı için (Adım 3) tek kopyası o state'te. Bileşen artık her zaman monte kalıyor, yalnızca `hidden` ile gizleniyor. Tarayıcıda doğrulandı: diğer sekmedeyken DOM'da duruyor, geri dönünce görünür oluyor.
+
 ### Son İşlem — Kurum ↔ Okul eşleştirici (2026-09-09)
 Rapordaki kurum adları CRM'deki okul adlarıyla sistematik olarak farklı yazılıyor ("ALKEV Özel Okulları" ↔ "ALKEV", "İTÜ GVO İzmir" ↔ "İzmir İTÜ GVO"); birebir eşleştirme neredeyse hiçbirini yakalamıyor. `kurum-eslestir.ts` yazıldı: genel kelimeleri ("özel", "okulları", "koleji"…) atıp kalan ayırt edici kelime kümesini Jaccard ile karşılaştırıyor. Gerçek verilerle test: 15 kurumdan 11'i kesin eşleşti, 4'ü doğru şekilde eşleşmedi (Afyon İsabet ≠ İsabet Trabzon, Final Akademi ≠ Final Okulları). Alt küme eşleşmesi bilerek reddediliyor. Toplu eşleştirmede iki kurum aynı okula talip olursa ikisi de "onay gerekir"e düşüyor — sessizce yanlış bağlamak yerine. `schools.city` NOT NULL olduğu için şehir kurum/şube adından tahmin ediliyor, bulunamazsa kullanıcıdan istenecek.
 
