@@ -215,3 +215,33 @@ export function metrikDegeri(hucre: TrendHucre | null, metrik: MetrikAnahtar): n
 export function kisaAy(tarih: string): string {
   return `${tarih.slice(5, 7)}.${tarih.slice(2, 4)}`;
 }
+
+/**
+ * "YYYY-MM-DD" → 1970'ten beri geçen gün sayısı.
+ *
+ * `Date.UTC` kullanılır, `new Date(str)` değil: yerel saat dilimi işin içine
+ * girmez, sunucu (UTC) ve tarayıcı (UTC+3) aynı sayıyı üretir. Daha önce
+ * saat dilimi farkı canlıda hydration çökertmişti.
+ */
+export function gunNumarasi(tarih: string): number {
+  const [y, a, g] = tarih.split("-").map(Number);
+  return Math.round(Date.UTC(y, a - 1, g) / 86_400_000);
+}
+
+/**
+ * Kesitleri zaman eksenine 0..1 aralığında yerleştirir.
+ *
+ * Eşit aralıklı çizmek yanlış olurdu: geçen yılın kapanış dosyası ile bu ayın
+ * kesiti arasında 15 ay, iki aylık kesit arasında 1 ay var; ikisini aynı
+ * genişlikte göstermek eğimi yanıltıcı yapar.
+ *
+ * Tek kesitte ya da tüm kesitler aynı gündeyse hepsi 0.5'e (ortaya) düşer.
+ */
+export function zamanKonumlari(tarihler: string[]): number[] {
+  if (tarihler.length === 0) return [];
+  const gunler = tarihler.map(gunNumarasi);
+  const ilk = Math.min(...gunler), son = Math.max(...gunler);
+  const aralik = son - ilk;
+  if (aralik === 0) return gunler.map(() => 0.5);
+  return gunler.map((g) => (g - ilk) / aralik);
+}

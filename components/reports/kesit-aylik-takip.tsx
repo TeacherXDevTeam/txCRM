@@ -6,7 +6,7 @@ import { Select } from "@/components/ui/select";
 import { tr, tr1 } from "./brand";
 import { formatDate } from "@/lib/utils";
 import {
-  METRIKLER, kisaAy, metrikDegeri,
+  METRIKLER, kisaAy, metrikDegeri, zamanKonumlari,
   type MetrikAnahtar, type Trend, type TrendHucre,
 } from "./kesit-trend";
 
@@ -46,19 +46,45 @@ const G = { g: 900, y: 300, sol: 52, sag: 14, ust: 16, alt: 34 };
 interface Seri { ad: string; renk: string; kalinlik: number; noktalar: (number | null)[] }
 
 function CizgiGrafik({
-  seriler, etiketler, yuzde,
-}: { seriler: Seri[]; etiketler: string[]; yuzde: boolean }) {
+  seriler, tarihler, yuzde,
+}: { seriler: Seri[]; tarihler: string[]; yuzde: boolean }) {
+  const etiketler = tarihler.map(kisaAy);
   const tumDegerler = seriler.flatMap((s) => s.noktalar).filter((d): d is number => d !== null);
   const enBuyuk = tumDegerler.length ? Math.max(...tumDegerler) : 1;
   const tavan = yuzde ? 100 : Math.max(1, Math.ceil((enBuyuk * 1.1) / 5) * 5);
 
   const cizim = G.g - G.sol - G.sag;
   const boy = G.y - G.ust - G.alt;
-  // Tek kesitte bölme sıfıra düşmesin diye nokta ortalanır.
-  const x = (i: number) => etiketler.length === 1
-    ? G.sol + cizim / 2
-    : G.sol + (i / (etiketler.length - 1)) * cizim;
+
+  /*
+   * Nokta konumları TARİHE göre; sıraya göre değil. Geçen yılın kapanış
+   * dosyası ile bu ayın kesiti arasında 15 ay, iki aylık kesit arasında
+   * 1 ay olabiliyor — eşit aralıklı çizmek eğimi yanıltıcı yapardı.
+   */
+  const konumlar = zamanKonumlari(tarihler);
+  const x = (i: number) => G.sol + konumlar[i] * cizim;
   const yy = (d: number) => G.ust + boy - (d / tavan) * boy;
+
+  /*
+   * Noktalar zaman ekseninde kümelenebilir (12 aylık kesit + 1 yıl öncesi).
+   * Üst üste binen etiket okunmaz; ilk ve son daima yazılır, aradakiler
+   * yalnız yeterli boşluk varsa.
+   */
+  const etiketliler = new Set<number>();
+  let sonX = -Infinity;
+  const ETIKET_ARALIGI = 46;
+  tarihler.forEach((_, i) => {
+    const son = i === tarihler.length - 1;
+    if (i === 0 || son || x(i) - sonX >= ETIKET_ARALIGI) {
+      // Son etiket sondan öncekini eziyorsa öncekini düşür
+      if (son && x(i) - sonX < ETIKET_ARALIGI) {
+        const oncekiler = [...etiketliler];
+        etiketliler.delete(oncekiler[oncekiler.length - 1]);
+      }
+      etiketliler.add(i);
+      sonX = x(i);
+    }
+  });
 
   const yEksen = [0, 0.25, 0.5, 0.75, 1].map((o) => o * tavan);
 
@@ -76,10 +102,14 @@ function CizgiGrafik({
           </g>
         ))}
 
-        {etiketler.map((e, i) => (
+        {etiketler.map((e, i) => etiketliler.has(i) ? (
           <text key={`${e}-${i}`} x={x(i)} y={G.y - 12} textAnchor="middle" fontSize="11" fill="#6B6B6B">
             {e}
           </text>
+        ) : (
+          // Etiketi sığmayan noktanın yerini küçük bir çentik gösterir
+          <line key={`${e}-${i}`} x1={x(i)} x2={x(i)} y1={G.y - G.alt + 2} y2={G.y - G.alt + 6}
+                stroke="#C9C6C0" strokeWidth="1" />
         ))}
 
         {seriler.map((s) => {
@@ -130,7 +160,6 @@ export function KesitAylikTakip({ trend }: { trend: Trend }) {
 
   const metrik = METRIKLER.find((m) => m.anahtar === metrikAnahtar)!;
   const { kesitler, kurumlar } = trend;
-  const etiketler = kesitler.map((k) => kisaAy(k.tarih));
 
   const sepetDegisiyor = trend.sabitKurumSayisi !== kurumlar.length;
   const toplamHucreler: (TrendHucre | null)[] = sabitSepet ? trend.toplamSabit : trend.toplam;
@@ -195,7 +224,7 @@ export function KesitAylikTakip({ trend }: { trend: Trend }) {
         </div>
       </div>
 
-      <CizgiGrafik seriler={seriler} etiketler={etiketler} yuzde={metrik.yuzde} />
+      <CizgiGrafik seriler={seriler} tarihler={kesitler.map((k) => k.tarih)} yuzde={metrik.yuzde} />
 
       <p className="px-1 text-[12px] leading-relaxed text-tx-gri">
         {metrik.aciklama}. Toplam satırı öğretmen sayısıyla <b className="font-medium text-tx-metin">ağırlıklı</b> hesaplanır —
