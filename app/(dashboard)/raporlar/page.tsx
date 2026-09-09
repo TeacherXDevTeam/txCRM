@@ -80,7 +80,7 @@ export default async function RaporlarPage() {
   if (!semaHatasi) {
     const { data: tumKesitler } = await supabase
       .from("report_kesit")
-      .select("id, kesit_tarihi")
+      .select("id, kesit_tarihi, dosya_adi, kaynak_satir")
       .order("kesit_tarihi", { ascending: false })
       .limit(TREND_KESIT_SINIRI);
 

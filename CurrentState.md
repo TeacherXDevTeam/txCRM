@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Kesitler ekranı: listeleme ve silme (2026-09-09)
+Kullanıcı aynı raporu farkı görmek için iki ayrı tarihe kaydetmişti ve fazlasını silmek istedi; silmenin tek yolu SQL Editor'e gitmekti. Raporlar'a "Kesitler" sekmesi eklendi: kayıtlı kesitler tarih, eğitim yılı, dosya adı, kurum/öğretmen/satır sayısıyla listeleniyor. Aynı dosyanın iki tarihe kaydedildiği böyle bakışta görülüyor (dosya adı aynı çıkıyor). Silme tek tıkla YAPILMIYOR: satır önce onay moduna geçiyor ("Geri alınamaz · Sil · Vazgeç") ve yalnız o satır vurgulanıyor. "Hepsini sil" gibi toplu bir işlem bilerek konmadı — bu oturumda bir kesit kazayla zaten kaybedilmişti. Silme cascade ile alt satırları da götürüyor ama `schools` etkilenmiyor. `TrendKesit` dosya adı, satır ve öğretmen sayısıyla genişletildi; sunucu sorgusuna iki alan eklendi (ek sorgu yok). Ekran yayına çıkana kadar kullanılabilecek `supabase/sorgular/kesit_sil.sql` da eklendi — önce listeleyen, sonra silen, sonra doğrulayan üç adımlı.
+
 ### Son İşlem — Üzerine yazma artık onay istiyor (2026-09-09)
 Uyarı yetmedi: kullanıcı geçmiş dönem dosyasını tarihi değiştirmeden kaydetti ve güncel kesit silindi. Uyarı okunmadan geçilebilecek bir metindi; kaza olabilecek bir işlem bilinçli bir onay gerektirmeli. Artık seçilen tarihte kayıtlı kesit varsa hem Kaydet hem Eşleştirme düğmesi KAPALI; açılması için "… kesitinin silinmesini onaylıyorum" kutusu işaretlenmeli. Onay, tarih değişince ve yeni dosya seçilince sıfırlanıyor. Tarayıcıda gerçek dosya yüklenerek doğrulandı: çakışan tarihte iki düğme de kapalı, onaydan sonra ikisi de açık; tarih 13.07.2026 yapılınca uyarı ve kutu kayboluyor, düğmeler onaysız açık; çakışan tarihe geri dönülünce onay sıfırlanıp düğmeler tekrar kapanıyor. Kullanıcının kaybı kurtarılabilir: iki kaynak Excel de yerinde (20.655 ve 23.108 satır), doğru tarihlerle yeniden yüklenerek geri alınıyor.
 
