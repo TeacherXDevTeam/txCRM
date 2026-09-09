@@ -162,8 +162,20 @@ export async function kesitSil(kesitId: string): Promise<void> {
  *
  * `schools.city` NOT NULL ama boş string'e izin verir; rapor şehir bilgisi
  * içermediği için boş geçilebilir, kullanıcı sonra doldurur.
+ *
+ * DURUM ÇAĞIRANDAN GELİR. Önce burada 'aktif' sabitlenmişti; geçmiş dönem
+ * raporundan açılan bir okul için bu yanlış — o kurumla artık çalışılmıyor
+ * olabilir, kayıt yine de "aktif" görünüyordu. Tamamlama raporu ortaklık
+ * durumu hakkında hiçbir şey söylemez.
+ *
+ * Mevcut bir okul bulunursa DURUMUNA DOKUNULMAZ: kullanıcının elle yaptığı
+ * işaretleme bir içe aktarmayla ezilmemeli.
  */
-export async function okulOlustur(ad: string, sehir: string): Promise<string> {
+export type OkulDurumu = "aktif" | "pasif" | "potansiyel";
+
+export async function okulOlustur(
+  ad: string, sehir: string, durum: OkulDurumu = "potansiyel"
+): Promise<string> {
   const sb = createClient();
   const temizAd = ad.trim();
 
@@ -178,7 +190,7 @@ export async function okulOlustur(ad: string, sehir: string): Promise<string> {
 
   const { data, error } = await sb
     .from("schools")
-    .insert({ name: temizAd, city: sehir, status: "aktif" })
+    .insert({ name: temizAd, city: sehir, status: durum })
     .select("id")
     .single();
   if (error || !data) throw new Error(`"${temizAd}" okulu oluşturulamadı: ${error?.message ?? "bilinmeyen hata"}`);

@@ -41,7 +41,13 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return kesisim / (a.size + b.size - kesisim);
 }
 
-export interface OkulAdayi { id: string; name: string }
+export interface OkulAdayi {
+  id: string;
+  name: string;
+  /** Ortaklık durumu — eşleştirme ekranında gösterilir ki pasif bir okul
+   *  gözden kaçıp yeniden açılmasın. Eşleştirme puanını ETKİLEMEZ. */
+  status?: string | null;
+}
 
 export type EslesmeGuveni = "kesin" | "onerilen" | "yok";
 
