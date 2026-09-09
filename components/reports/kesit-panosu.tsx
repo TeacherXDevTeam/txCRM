@@ -9,6 +9,7 @@ import { kesitUret, kesitUretOzet, type Kesit, type KesitKurum } from "./kesit";
 import { KesitKarsilastirma } from "./kesit-karsilastirma";
 import { KesitSubeAnalizi } from "./kesit-sube-analizi";
 import { KesitEgitimAnalizi } from "./kesit-egitim-analizi";
+import { KesitDagilim } from "./kesit-dagilim";
 import { YazdirButonu } from "./print-button";
 import {
   UstSerit, RaporBasligi, Bolum, Pano, Kpi, Halka, YatayBarlar,
@@ -187,6 +188,12 @@ export function KesitPanosu() {
                   Başlığa tıklayarak sıralayın · kurum adına tıklayarak o kurumun raporuna gidin
                 </p>
               </div>
+              {kesit.kurumlar.length > 2 && (
+                <KesitDagilim
+                  kurumlar={kesit.kurumlar}
+                  onKurumSec={(kurumAdi) => setGorunum({ tip: "kurum", kurumAdi })}
+                />
+              )}
               <KesitKarsilastirma
                 kurumlar={kesit.kurumlar}
                 onKurumSec={(kurumAdi) => setGorunum({ tip: "kurum", kurumAdi })}
