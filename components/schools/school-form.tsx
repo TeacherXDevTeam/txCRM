@@ -23,9 +23,10 @@ export function SchoolForm({ school, onClose }: SchoolFormProps) {
 
   const [form, setForm] = useState({
     name:                  school?.name                  ?? "",
-    city:                  school?.city                  ?? "İstanbul",
+    city:                  school?.city                  ?? "",
     district:              school?.district              ?? "",
-    school_type:           school?.school_type           ?? "devlet",
+    // TeacherX'in çalıştığı kurumların tamamı özel; varsayılan buna göre
+    school_type:           school?.school_type           ?? "ozel",
     status:                school?.status                ?? "potansiyel",
     partnership_start_date: school?.partnership_start_date ?? "",
     notes:                 school?.notes                 ?? "",
@@ -45,7 +46,16 @@ export function SchoolForm({ school, onClose }: SchoolFormProps) {
 
     const payload = {
       name: form.name.trim(),
-      city: form.city.trim() || "İstanbul",
+      /*
+       * ŞEHİR UYDURULMAZ. Burada `|| "İstanbul"` vardı: şehri boş bir okulu
+       * başka bir sebeple (ör. durumunu Pasif yapmak için) düzenleyip
+       * kaydetmek, şehri sessizce İstanbul yazıyordu. Yanlış veri, eksik
+       * veriden kötüdür — eksik olan "Profil Tamamlama"da görünür ve
+       * düzeltilir, yanlış olan doğru sanılır.
+       *
+       * schools.city NOT NULL ama boş string'e izin verir.
+       */
+      city: form.city.trim(),
       district: form.district.trim() || null,
       school_type: form.school_type as School["school_type"],
       status: form.status as School["status"],

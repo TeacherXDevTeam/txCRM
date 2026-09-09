@@ -31,7 +31,7 @@ export default async function RaporlarPage() {
   }
 
   // Eşleştirme için okul listesi
-  const { data: okulRows } = await supabase.from("schools").select("id, name").order("name");
+  const { data: okulRows } = await supabase.from("schools").select("id, name, status").order("name");
   const okullar: OkulAdayi[] = okulRows ?? [];
 
   // En son kaydedilmiş kesit. Tablolar yoksa sessizce boş görünmek yerine

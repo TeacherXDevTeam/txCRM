@@ -321,11 +321,11 @@ export function KesitEslestirme({
                       <option value="__yok">— Bağlama</option>
                       {e.digerAdaylar.length > 0 && (
                         <optgroup label="Yakın adaylar">
-                          {e.digerAdaylar.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                          {e.digerAdaylar.map((o) => <option key={o.id} value={o.id}>{okulEtiketi(o)}</option>)}
                         </optgroup>
                       )}
                       <optgroup label="Tüm okullar">
-                        {okullar.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                        {okullar.map((o) => <option key={o.id} value={o.id}>{okulEtiketi(o)}</option>)}
                       </optgroup>
                     </Select>
 
@@ -360,6 +360,14 @@ export function KesitEslestirme({
       </p>
     </div>
   );
+}
+
+/**
+ * Okul adının yanına durumu yazar. Pasif ya da potansiyel bir okul, listede
+ * ayırt edilemediği için gözden kaçıp "yeni okul" olarak yeniden açılabiliyordu.
+ */
+function okulEtiketi(o: OkulAdayi): string {
+  return o.status && o.status !== "aktif" ? `${o.name}  (${o.status})` : o.name;
 }
 
 function Kutu({ etiket, deger, renk }: { etiket: string; deger: number; renk: string }) {

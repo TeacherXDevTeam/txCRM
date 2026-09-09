@@ -20,7 +20,7 @@ import {
 } from "./brand";
 import { formatDate } from "@/lib/utils";
 import { KesitEslestirme, type Karar } from "./kesit-eslestirme";
-import { kesitKaydet, okulOlustur } from "./kesit-db";
+import { kesitKaydet, okulOlustur, type OkulDurumu } from "./kesit-db";
 import type { KayitliKesit } from "./kesit-map";
 import {
   kararlariHazirla, ilgiGerekenSayisi,
@@ -120,11 +120,22 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
     if (!kesit) return;
     setKaydediliyor(true); setKayitHatasi(null);
     try {
+      /*
+       * Yeni okulun durumu, kaydedilen kesitin GÜNCEL olup olmadığına bakar.
+       * Geçmiş dönem raporundan açılan bir okulu "aktif" saymak yanlış:
+       * o kurumla artık çalışılmıyor olabilir. Güncel kesitte görülen kurum
+       * ise fiilen aktif.
+       */
+      const enSonKesit = (trend?.kesitler ?? []).reduce<string | null>(
+        (a, k) => (a === null || k.tarih > a ? k.tarih : a), null);
+      const yeniOkulDurumu: OkulDurumu =
+        enSonKesit === null || kesitTarihi >= enSonKesit ? "aktif" : "potansiyel";
+
       // Önce yeni okullar açılır; id'leri bağlantı haritasına girer
       const baglantilar: Record<string, string | null> = {};
       for (const [kurumAdi, karar] of Object.entries(kararlar)) {
         if (karar.tip === "okul") baglantilar[kurumAdi] = karar.schoolId;
-        else if (karar.tip === "yeni") baglantilar[kurumAdi] = await okulOlustur(kurumAdi, karar.sehir.trim());
+        else if (karar.tip === "yeni") baglantilar[kurumAdi] = await okulOlustur(kurumAdi, karar.sehir.trim(), yeniOkulDurumu);
         else baglantilar[kurumAdi] = null;
       }
 
