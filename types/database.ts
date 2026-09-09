@@ -658,29 +658,6 @@ export interface Database {
           is_read?: boolean;
         };
       };
-      report_uploads: {
-        Row: {
-          id: string;
-          uploaded_by: string | null;
-          dosya_adi: string | null;
-          satir_sayisi: number;
-          format: "kurs" | "ogretmen";
-          uploaded_at: string;
-        };
-        Insert: {
-          uploaded_by?: string | null;
-          dosya_adi?: string | null;
-          satir_sayisi?: number;
-          format?: "kurs" | "ogretmen";
-        };
-        Relationships: [];
-        Update: {
-          uploaded_by?: string | null;
-          dosya_adi?: string | null;
-          satir_sayisi?: number;
-          format?: "kurs" | "ogretmen";
-        };
-      };
       report_kesit: {
         Row: {
           id: string;
@@ -815,28 +792,6 @@ export interface Database {
         };
         Relationships: [];
         Update: { adet?: number };
-      };
-      report_kurum_stats: {
-        Row: {
-          id: string;
-          upload_id: string;
-          kurum: string;
-          teacher_count: number;
-          stats: Json;
-          created_at: string;
-        };
-        Insert: {
-          upload_id: string;
-          kurum: string;
-          teacher_count?: number;
-          stats: Json;
-        };
-        Relationships: [];
-        Update: {
-          kurum?: string;
-          teacher_count?: number;
-          stats?: Json;
-        };
       };
     };
     Views: Record<string, never>;
