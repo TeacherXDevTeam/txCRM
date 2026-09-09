@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { KesitPanosu } from "@/components/reports/kesit-panosu";
-import { satirlariKesiteCevir, type KayitliKesit } from "@/components/reports/kesit-db";
+import { satirlariKesiteCevir, type KayitliKesit } from "@/components/reports/kesit-map";
 import type { OkulAdayi } from "@/components/reports/kurum-eslestir";
 
 export const metadata = { title: "Raporlar — TeacherX CRM" };
