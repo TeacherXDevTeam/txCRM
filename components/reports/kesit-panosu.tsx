@@ -21,7 +21,10 @@ import { formatDate } from "@/lib/utils";
 import { KesitEslestirme, type Karar } from "./kesit-eslestirme";
 import { kesitKaydet, okulOlustur } from "./kesit-db";
 import type { KayitliKesit } from "./kesit-map";
-import type { OkulAdayi } from "./kurum-eslestir";
+import {
+  kararlariHazirla, ilgiGerekenSayisi,
+  type OkulAdayi, type OncekiKarar,
+} from "./kurum-eslestir";
 import { useRouter } from "next/navigation";
 
 type Sayfa = "karsilastirma" | "sube" | "egitim" | "aylik";
@@ -40,11 +43,13 @@ interface PanoProps {
   kayitli: KayitliKesit | null;
   /** Kaydedilmiş tüm kesitlerin zaman serisi — Aylık Takip sekmesi */
   trend: Trend | null;
+  /** Kurum adı → önceki kesitlerde verilmiş eşleştirme kararı */
+  oncekiKararlar: Record<string, OncekiKarar>;
   /** Şema uygulanmamışsa sunucudan gelen hata */
   semaHatasi: string | null;
 }
 
-export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, semaHatasi }: PanoProps) {
+export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararlar, semaHatasi }: PanoProps) {
   const router = useRouter();
   // Kaydedilmiş kesit varsa onunla açılır; yükleme yapılınca üzerine yazılır.
   const [kesit, setKesit] = useState<Kesit | null>(
@@ -59,6 +64,8 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, semaHatasi }
   const [eslestirmede, setEslestirmede] = useState(false);
   const [kaydediliyor, setKaydediliyor] = useState(false);
   const [kayitHatasi, setKayitHatasi] = useState<string | null>(null);
+  /** Eşleştirme ekranı atlandıysa kaç kurumun kararı hatırlandı — kullanıcıya bildirilir */
+  const [atlandiBilgisi, setAtlandiBilgisi] = useState<number | null>(null);
 
   function dosyaSecildi(e: React.ChangeEvent<HTMLInputElement>) {
     setHata(null);
@@ -115,6 +122,28 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, semaHatasi }
       setKayitHatasi(e instanceof Error ? e.message : "Kaydedilemedi.");
     } finally {
       setKaydediliyor(false);
+    }
+  }
+
+  /**
+   * Kaydet'e basınca eşleştirme ekranı YALNIZCA sorulacak bir şey varsa açılır.
+   * Aynı rapor her ay yeniden yükleniyor; tüm kurumların kararı hatırlanmışsa
+   * 92 satırlık listeyi tekrar onaylatmak boşuna bir adım olur. Ekrana yine de
+   * "Eşleştirme" düğmesiyle elle girilebilir.
+   */
+  function kaydetmeyeBasla() {
+    setKayitHatasi(null);
+    if (!kesit) return;
+    const subeAdlari = new Map(kesit.kurumlar.map((k) => [k.kurumAdi, k.subeler.map((s) => s.subeAdi)]));
+    const hazir = kararlariHazirla(
+      kesit.kurumlar.map((k) => k.kurumAdi), okullar, subeAdlari, oncekiKararlar);
+
+    if (ilgiGerekenSayisi(hazir.durumlar) === 0) {
+      setAtlandiBilgisi(Object.keys(hazir.kararlar).length);
+      void kaydet(hazir.kararlar);
+    } else {
+      setAtlandiBilgisi(null);
+      setEslestirmede(true);
     }
   }
 
@@ -180,8 +209,15 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, semaHatasi }
                   className="h-9 rounded-md border border-tx-cizgi bg-white px-3 text-sm"
                 />
               </div>
-              <Button onClick={() => { setKayitHatasi(null); setEslestirmede(true); }} disabled={kayitliMi}>
-                {kayitliMi ? "Kaydedildi" : "Kaydet"}
+              <button
+                onClick={() => { setKayitHatasi(null); setAtlandiBilgisi(null); setEslestirmede(true); }}
+                disabled={kayitliMi || kaydediliyor}
+                className="h-9 rounded-md border border-tx-cizgi bg-white px-3 text-sm text-tx-gri hover:text-tx-metin disabled:opacity-50"
+              >
+                Eşleştirme
+              </button>
+              <Button onClick={kaydetmeyeBasla} disabled={kayitliMi || kaydediliyor}>
+                {kaydediliyor ? "Kaydediliyor..." : kayitliMi ? "Kaydedildi" : "Kaydet"}
               </Button>
               <button onClick={temizle} className="text-tx-gri hover:text-tx-metin" title="Vazgeç">
                 <X className="h-5 w-5" />
@@ -193,6 +229,20 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, semaHatasi }
         {hata && (
           <p className="mt-3 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2 text-sm text-tx-metin">
             {hata}
+          </p>
+        )}
+
+        {atlandiBilgisi !== null && kayitliMi && !kayitHatasi && (
+          <p className="mt-3 rounded-md border-l-[3px] border-tx-cizgi bg-white px-3 py-2 text-[13px] text-tx-gri">
+            <b className="font-medium text-tx-metin">{tr(atlandiBilgisi)}</b> kurumun tamamı önceki
+            kesitlerden hatırlandığı için eşleştirme sorulmadı. Değiştirmek için
+            &quot;Eşleştirme&quot; düğmesini kullanın.
+          </p>
+        )}
+
+        {kayitHatasi && !eslestirmede && (
+          <p className="mt-3 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2 text-[13px] text-tx-metin">
+            {kayitHatasi}
           </p>
         )}
 
@@ -214,6 +264,7 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, semaHatasi }
 
       {kesit && eslestirmede ? (
         <KesitEslestirme
+          oncekiKararlar={oncekiKararlar}
           kurumlar={kesit.kurumlar}
           okullar={okullar}
           kaydediliyor={kaydediliyor}

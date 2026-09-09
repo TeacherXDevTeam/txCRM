@@ -3,6 +3,8 @@ import { KesitPanosu } from "@/components/reports/kesit-panosu";
 import { satirlariKesiteCevir, type KayitliKesit } from "@/components/reports/kesit-map";
 import type { OkulAdayi } from "@/components/reports/kurum-eslestir";
 import { trendKur, type Trend } from "@/components/reports/kesit-trend";
+import { oncekiKararlariCikar } from "@/components/reports/kesit-map";
+import type { OncekiKarar } from "@/components/reports/kurum-eslestir";
 import type { Database } from "@/types/database";
 
 export const metadata = { title: "Raporlar — TeacherX CRM" };
@@ -72,6 +74,8 @@ export default async function RaporlarPage() {
   // Satır sayısı kesit × kurum ile büyür (12 kesit × 92 kurum ≈ 1100) ve
   // PostgREST tek istekte 1000 satırda kesiyor; bu yüzden sayfalanır.
   let trend: Trend | null = null;
+  // Kurum → önceki eşleştirme kararı. Aynı satırlardan çıkar, ek sorgu yok.
+  let oncekiKararlar: Record<string, OncekiKarar> = {};
 
   if (!semaHatasi) {
     const { data: tumKesitler } = await supabase
@@ -100,6 +104,7 @@ export default async function RaporlarPage() {
       }
 
       trend = trendKur(tumKesitler, satirlar);
+      oncekiKararlar = oncekiKararlariCikar(tumKesitler, satirlar);
     }
   }
 
@@ -123,6 +128,7 @@ export default async function RaporlarPage() {
         okullar={okullar}
         kayitli={kayitli}
         trend={trend}
+        oncekiKararlar={oncekiKararlar}
         semaHatasi={semaHatasi}
       />
     </div>

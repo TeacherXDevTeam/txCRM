@@ -8,6 +8,7 @@
 
 import type { Database } from "@/types/database";
 import type { KesitKurum } from "./kesit";
+import type { OncekiKarar } from "./kurum-eslestir";
 
 type KurumRow = Database["public"]["Tables"]["report_kurum"]["Row"];
 type SubeRow = Database["public"]["Tables"]["report_sube"]["Row"];
@@ -82,4 +83,32 @@ export function satirlariKesiteCevir(
         .sort((a, b) => a.ay.localeCompare(b.ay)),
     }))
     .sort((a, b) => a.kurumAdi.localeCompare(b.kurumAdi, "tr"));
+}
+
+/**
+ * Kaydedilmiş kesitlerden kurum → son eşleştirme kararını çıkarır.
+ *
+ * `report_kurum` satırı VARSA bir karar verilmiş demektir: `school_id` doluysa
+ * okula bağlanmış, `null` ise kullanıcı bilerek "Bağlama" demiş. Satır yoksa
+ * kurum hiç görülmemiştir. Bu ayrım önemli — "bağlama" kararı da hatırlanmalı,
+ * yoksa her yüklemede yeniden "yeni okul olarak ekle" diye önerilir.
+ *
+ * Aynı kurum birden çok kesitte varsa EN SON kesitteki karar geçerlidir.
+ */
+export function oncekiKararlariCikar(
+  kesitler: { id: string; kesit_tarihi: string }[],
+  kurumSatirlari: { kesit_id: string; kurum_adi: string; school_id: string | null }[],
+): Record<string, OncekiKarar> {
+  const tarih = new Map(kesitler.map((k) => [k.id, k.kesit_tarihi]));
+  const sonuc: Record<string, OncekiKarar> = {};
+
+  for (const r of kurumSatirlari) {
+    const t = tarih.get(r.kesit_id);
+    if (t === undefined) continue;
+    const mevcut = sonuc[r.kurum_adi];
+    if (mevcut === undefined || t > mevcut.tarih) {
+      sonuc[r.kurum_adi] = { schoolId: r.school_id, tarih: t };
+    }
+  }
+  return sonuc;
 }

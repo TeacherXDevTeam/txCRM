@@ -1,53 +1,55 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, Check, CircleAlert, Plus, Save } from "lucide-react";
+import { ArrowLeft, Check, CircleAlert, History, Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import type { KesitKurum } from "./kesit";
 import {
-  kurumlariEslestir, eslesmeOzeti, sehirTahminEt, type OkulAdayi,
+  kararlariHazirla, sehirTahminEt,
+  type Karar, type KararDurumu, type OkulAdayi, type OncekiKarar,
 } from "./kurum-eslestir";
 import { tr } from "./brand";
-
-/** Bir kurum için kullanıcının kararı. */
-type Karar =
-  | { tip: "okul"; schoolId: string }
-  | { tip: "yeni"; sehir: string }
-  | { tip: "yok" };
+import { formatDate } from "@/lib/utils";
 
 interface Props {
   kurumlar: KesitKurum[];
   okullar: OkulAdayi[];
+  /** Önceki kesitlerden hatırlanan kararlar — bulanık eşleştirmeyi ezer */
+  oncekiKararlar: Record<string, OncekiKarar>;
   kaydediliyor: boolean;
   hata: string | null;
   onGeri: () => void;
   onKaydet: (kararlar: Record<string, Karar>) => void;
 }
 
-export function KesitEslestirme({ kurumlar, okullar, kaydediliyor, hata, onGeri, onKaydet }: Props) {
-  const eslesmeler = useMemo(
-    () => kurumlariEslestir(kurumlar.map((k) => k.kurumAdi), okullar),
-    [kurumlar, okullar]
-  );
-  const ozet = useMemo(() => eslesmeOzeti(eslesmeler), [eslesmeler]);
-
+export function KesitEslestirme({
+  kurumlar, okullar, oncekiKararlar, kaydediliyor, hata, onGeri, onKaydet,
+}: Props) {
   const subeAdlari = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const k of kurumlar) m.set(k.kurumAdi, k.subeler.map((s) => s.subeAdi));
     return m;
   }, [kurumlar]);
 
-  // Başlangıç kararları: eşleşen okula bağlan, eşleşmeyen için yeni okul öner
-  const [kararlar, setKararlar] = useState<Record<string, Karar>>(() => {
-    const k: Record<string, Karar> = {};
-    for (const e of eslesmeler) {
-      k[e.raporKurum] = e.okul
-        ? { tip: "okul", schoolId: e.okul.id }
-        : { tip: "yeni", sehir: sehirTahminEt(e.raporKurum, subeAdlari.get(e.raporKurum) ?? []) ?? "" };
-    }
-    return k;
-  });
+  // Başlangıç kararları: önce hatırlanan karar, yoksa bulanık eşleştirme.
+  const hazir = useMemo(
+    () => kararlariHazirla(kurumlar.map((k) => k.kurumAdi), okullar, subeAdlari, oncekiKararlar),
+    [kurumlar, okullar, subeAdlari, oncekiKararlar]
+  );
+  const { eslesmeler, durumlar } = hazir;
+
+  const hatirlananSayisi = Object.values(durumlar).filter((d) => d === "hatirlandi").length;
+
+  // Sorulması gerekenler üste — 92 satırlık listede yeni kurum aranmasın.
+  const siraliEslesmeler = useMemo(() => {
+    const agirlik: Record<KararDurumu, number> = { onay: 0, yeni: 1, otomatik: 2, hatirlandi: 3 };
+    return [...eslesmeler].sort((a, b) =>
+      agirlik[durumlar[a.raporKurum]] - agirlik[durumlar[b.raporKurum]] ||
+      a.raporKurum.localeCompare(b.raporKurum, "tr"));
+  }, [eslesmeler, durumlar]);
+
+  const [kararlar, setKararlar] = useState<Record<string, Karar>>(hazir.kararlar);
 
   const ayarla = (kurum: string, karar: Karar) => setKararlar((p) => ({ ...p, [kurum]: karar }));
 
@@ -72,7 +74,7 @@ export function KesitEslestirme({ kurumlar, okullar, kaydediliyor, hata, onGeri,
           <p className="max-w-[70ch] text-[12.5px] text-tx-gri">
             Rapordaki kurum adları CRM&apos;deki okul kayıtlarıyla eşleştirilir. Eşleşen kurumların
             verisi sözleşme, atama ve lead verisiyle aynı okul üzerinden birleşir.
-            Eşleştirme kaydedilir; sonraki kesitlerde tekrar sorulmaz.
+            Verdiğiniz karar kaydedilir; aynı kurum sonraki kesitlerde tekrar sorulmaz.
           </p>
         </div>
         <Button onClick={() => onKaydet(kararlar)} disabled={kaydediliyor || sehirsizYeni.length > 0}>
@@ -82,10 +84,26 @@ export function KesitEslestirme({ kurumlar, okullar, kaydediliyor, hata, onGeri,
       </div>
 
       {/* özet */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kutu etiket="Otomatik eşleşen" deger={ozet.kesin} renk="text-tx-metin" />
-        <Kutu etiket="Onay gereken" deger={ozet.onerilen} renk={ozet.onerilen ? "text-tx-kirmizi" : "text-tx-metin"} />
-        <Kutu etiket="Yeni okul olarak eklenecek" deger={yeniSayisi} renk="text-tx-metin" />
+      {hatirlananSayisi > 0 && (
+        <p className="rounded border-l-[3px] border-tx-cizgi bg-white px-4 py-3 text-[13px] text-tx-gri">
+          <b className="font-medium text-tx-metin">{tr(hatirlananSayisi)}</b> kurumun kararı önceki
+          kesitlerden hatırlandı ve aşağıda hazır seçili — dokunmanıza gerek yok.
+          {eslesmeler.length - hatirlananSayisi > 0
+            ? <> Sorulması gereken <b className="font-medium text-tx-metin">{tr(eslesmeler.length - hatirlananSayisi)}</b> kurum listenin başında.</>
+            : " Yeni kurum yok."}
+        </p>
+      )}
+
+      {/*
+        Kutular "kaydedince ne olacak" sorusunu yanıtlar ve BİRBİRİNİ DIŞLAR —
+        toplamları kurum sayısına eşittir. Daha önce burada bulanık eşleştirme
+        sayıları da vardı; hatırlanan kurumlar iki kez sayılıyor ve toplam
+        tutmuyordu. Hatırlanan/sorulacak ayrımı yukarıdaki şeritte.
+      */}
+      <div className="grid grid-cols-3 gap-3">
+        <Kutu etiket="Mevcut okula bağlanacak" deger={baglananSayisi} renk="text-tx-metin" />
+        <Kutu etiket="Yeni okul olarak eklenecek" deger={yeniSayisi}
+              renk={yeniSayisi ? "text-tx-kirmizi" : "text-tx-metin"} />
         <Kutu etiket="Bağlanmayacak" deger={yokSayisi} renk="text-tx-gri" />
       </div>
 
@@ -112,7 +130,7 @@ export function KesitEslestirme({ kurumlar, okullar, kaydediliyor, hata, onGeri,
             </tr>
           </thead>
           <tbody>
-            {eslesmeler.map((e) => {
+            {siraliEslesmeler.map((e) => {
               const kurum = kurumlar.find((k) => k.kurumAdi === e.raporKurum);
               const karar = kararlar[e.raporKurum];
               return (
@@ -122,7 +140,14 @@ export function KesitEslestirme({ kurumlar, okullar, kaydediliyor, hata, onGeri,
                     {tr(kurum?.ogretmenSayisi ?? 0)}
                   </td>
                   <td className="border-b border-tx-cizgi px-2.5 py-2.5">
-                    {e.guven === "kesin" ? (
+                    {durumlar[e.raporKurum] === "hatirlandi" ? (
+                      <span className="inline-flex items-center gap-1 text-[12px] text-tx-gri">
+                        <History className="h-3.5 w-3.5" /> hatırlandı
+                        <span className="text-tx-gri opacity-70">
+                          ({formatDate(oncekiKararlar[e.raporKurum].tarih)})
+                        </span>
+                      </span>
+                    ) : e.guven === "kesin" ? (
                       <span className="inline-flex items-center gap-1 text-[12px] text-tx-metin">
                         <Check className="h-3.5 w-3.5" /> otomatik
                       </span>
@@ -183,7 +208,10 @@ export function KesitEslestirme({ kurumlar, okullar, kaydediliyor, hata, onGeri,
           </tbody>
         </table>
       </div>
-      <p className="text-[11.5px] text-tx-gri">{tr(baglananSayisi)} kurum mevcut okula bağlanacak.</p>
+      <p className="text-[11.5px] text-tx-gri">
+        Toplam {tr(eslesmeler.length)} kurum. Verdiğiniz kararlar kaydedilir; bir dahaki
+        yüklemede aynı kurumlar &quot;hatırlandı&quot; olarak gelir ve tekrar sorulmaz.
+      </p>
     </div>
   );
 }
