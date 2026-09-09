@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Hotfix: Raporlar'da Server Components render hatası (2026-09-09)
+Adım 3 canlıya çıkınca sayfa "An error occurred in the Server Components render" veriyordu. Sebep: `raporlar/page.tsx` bir Server Component ama `satirlariKesiteCevir`'i `"use client"` işaretli `kesit-db.ts`'ten alıp **sunucuda çağırıyordu**. App Router'da böyle bir import gerçek fonksiyonu değil istemci referansını verir; çağrı `is not a function` ile patlar. TypeScript bu sınırı modellemediği için build temiz geçmişti. Saf dönüştürme fonksiyonu `"use client"` içermeyen `kesit-map.ts`'e taşındı; `kesit-db.ts` yalnızca DB yazan istemci fonksiyonlarını tutuyor. Hata yerelde geçici bir Server Component ile birebir üretildi ve düzeltmeden sonra geçtiği doğrulandı. `client-only` paketi denendi ama bu durumu yakalamıyor (bir "use client" modülünü import etmek serbest; sorun export'u sunucuda çağırmak) — yanıltıcı olmasın diye kaldırıldı, yerine iki dosyanın başına açıklayıcı uyarı kondu.
+
 ### Son İşlem — Adım 3: kesit kaydetme + kurum eşleştirme (2026-09-09)
 Migration canlıda çalıştırıldı (5 tablo doğrulandı). `kesit-db.ts` yazma/okuma katmanı: aynı `kesit_tarihi` varsa önce silinip yeniden yazılıyor (cascade), kurum id'leri geri alınıp alt tablolar bağlanıyor. `kesit-eslestirme.tsx` ekranı: her kurum için *mevcut okula bağla / yeni okul olarak ekle / bağlama*; otomatik eşleşenler işaretli, çakışanlar onaya düşüyor, yeni okullarda şehir zorunlu (kurum+şube adından tahmin ediliyor). Sayfa artık kayıtlı kesiti DB'den okuyor — yenileme veriyi kaybetmiyor. Tablolar yoksa sessizce boş görünmek yerine ne yapılacağını söyleyen uyarı çıkıyor. Tiplerin gerçek şemayla eşleştiği PostgREST üzerinden doğrulandı (5 tablo, 60+ kolon). **Kaydetme işlemi giriş gerektirdiği için uçtan uca test edilemedi — kullanıcı denemeli.**
 

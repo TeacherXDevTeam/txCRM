@@ -17,7 +17,8 @@ import {
 } from "./brand";
 import { formatDate } from "@/lib/utils";
 import { KesitEslestirme, type Karar } from "./kesit-eslestirme";
-import { kesitKaydet, okulOlustur, type KayitliKesit } from "./kesit-db";
+import { kesitKaydet, okulOlustur } from "./kesit-db";
+import type { KayitliKesit } from "./kesit-map";
 import type { OkulAdayi } from "./kurum-eslestir";
 import { useRouter } from "next/navigation";
 
