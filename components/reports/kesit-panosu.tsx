@@ -5,7 +5,7 @@ import { Upload, FileSpreadsheet, X, AlertTriangle, ArrowLeft } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { excelOku, SUTUNLAR_DETAYLI, SUTUNLAR_OZET } from "./kesit-parse";
-import { kesitUret, kesitUretOzet, type Kesit, type KesitKurum } from "./kesit";
+import { kesitUret, kesitUretOzet, kurumlariBirlestir, TUMU_ADI, type Kesit, type KesitKurum } from "./kesit";
 import { KesitKarsilastirma } from "./kesit-karsilastirma";
 import { KesitSubeAnalizi } from "./kesit-sube-analizi";
 import { KesitEgitimAnalizi } from "./kesit-egitim-analizi";
@@ -157,8 +157,17 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
     }
   }
 
+  // TÜMÜ seçilirse kurumlar tek bir toplam "kurum"a indirgenir (Adım 8).
+  // useMemo: 92 kurumun eğitim birleşimi her render'da yeniden hesaplanmasın.
+  const tumu = useMemo(
+    () => (kesit ? kurumlariBirlestir(kesit.kurumlar) : null),
+    [kesit]
+  );
+
   const secili = kesit && gorunum.tip === "kurum"
-    ? kesit.kurumlar.find((k) => k.kurumAdi === gorunum.kurumAdi) ?? null
+    ? (gorunum.kurumAdi === TUMU_ADI
+        ? tumu
+        : kesit.kurumlar.find((k) => k.kurumAdi === gorunum.kurumAdi) ?? null)
     : null;
 
   return (
@@ -327,6 +336,7 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
             <div className="w-72 pb-2">
               <Select value="" onChange={(e) => e.target.value && setGorunum({ tip: "kurum", kurumAdi: e.target.value })}>
                 <option value="">Kurum raporuna git…</option>
+                {kesit.kurumlar.length > 1 && <option value={TUMU_ADI}>{TUMU_ADI}</option>}
                 {kesit.kurumlar.map((k) => <option key={k.kurumAdi} value={k.kurumAdi}>{k.kurumAdi}</option>)}
               </Select>
             </div>
@@ -367,6 +377,13 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
 
 export function KurumDetay({ kurum: k, tarih, onGeri }: { kurum: KesitKurum; tarih: string; onGeri: () => void }) {
   const yuzde = (n: number) => (k.ogretmenSayisi ? Math.round((n / k.ogretmenSayisi) * 100) : 0);
+  /*
+   * TÜMÜ raporunda `subeler` alanı şubeleri değil KURUMLARI taşır
+   * (bkz. kurumlariBirlestir). 92 kurumun bütün şubelerini tek listede
+   * göstermek okunmaz; asıl aranan kırılım kurum kırılımı.
+   */
+  const toplamMi = k.kurumAdi === TUMU_ADI;
+  const kirilimAdi = toplamMi ? "Kurum" : "Şube";
 
   // Kümülatif sertifika eğrisi
   const kumulatif = useMemo(() => {
@@ -391,12 +408,18 @@ export function KurumDetay({ kurum: k, tarih, onGeri }: { kurum: KesitKurum; tar
         <UstSerit tarih={tarih} />
         <RaporBasligi
           kurum={k.kurumAdi}
-          altBaslik="TeacherX Eğitim Tamamlama Raporu"
+          altBaslik={toplamMi ? "TeacherX Eğitim Tamamlama Raporu — genel toplam" : "TeacherX Eğitim Tamamlama Raporu"}
           meta={
             <>
+              {toplamMi && (
+                <>
+                  <b className="font-medium text-tx-metin">{tr(k.subeler.length)}</b> kurum ·{" "}
+                </>
+              )}
               <b className="font-medium text-tx-metin">{tr(k.ogretmenSayisi)}</b> öğretmen ·{" "}
               <b className="font-medium text-tx-metin">{tr(k.subeSayisi)}</b> şube ·{" "}
-<b className="font-medium text-tx-metin">{k.egitimSayisi === null ? "—" : tr(k.egitimSayisi)}</b> atanan eğitim
+              <b className="font-medium text-tx-metin">{k.egitimSayisi === null ? "—" : tr(k.egitimSayisi)}</b>{" "}
+              {toplamMi ? "farklı eğitim" : "atanan eğitim"}
             </>
           }
         />
@@ -404,7 +427,7 @@ export function KurumDetay({ kurum: k, tarih, onGeri }: { kurum: KesitKurum; tar
         <main className="mx-auto max-w-[900px] px-7 pb-16 pt-10">
           <Pano>
             <Kpi etiket="Öğretmen sayısı" deger={tr(k.ogretmenSayisi)} />
-            <Kpi etiket="Atanan eğitim sayısı" deger={k.egitimSayisi === null ? "—" : tr(k.egitimSayisi)} alt={`${tr(k.kayitSayisi)} kayıt`} />
+            <Kpi etiket={toplamMi ? "Farklı eğitim sayısı" : "Atanan eğitim sayısı"} deger={k.egitimSayisi === null ? "—" : tr(k.egitimSayisi)} alt={`${tr(k.kayitSayisi)} kayıt`} />
             <Kpi etiket="İlerleme ortalaması" deger={`%${k.ilerlemeOrtalamasi.toFixed(1)}`} alt="kısmi ilerleme sayılır" vurgu />
             <Kpi etiket="Tamamlanma oranı" deger={`%${k.tamamlanmaOrani.toFixed(1)}`} alt={`${tr(k.tamamlananEgitim)} eğitim bitti`} />
           </Pano>
@@ -436,11 +459,16 @@ export function KurumDetay({ kurum: k, tarih, onGeri }: { kurum: KesitKurum; tar
 
           <div className="h-11" />
 
-          <Bolum baslik="Şubeler" aciklama="Şube ortalamaları. Kurum ortalaması şube ortalamalarının ortalaması değildir; öğretmen düzeyinden hesaplanır.">
+          <Bolum
+            baslik={toplamMi ? "Kurumlar" : "Şubeler"}
+            aciklama={toplamMi
+              ? "Kurum ortalamaları. Genel ortalama kurum ortalamalarının ortalaması değildir; öğretmen sayısıyla ağırlıklıdır."
+              : "Şube ortalamaları. Kurum ortalaması şube ortalamalarının ortalaması değildir; öğretmen düzeyinden hesaplanır."}
+          >
             <YatayBarlar satirlar={k.subeler.map((s) => ({
               ad: s.subeAdi, oran: s.ilerlemeOrtalamasi, deger: `%${Math.round(s.ilerlemeOrtalamasi)}`,
             }))} />
-            <Tablo basliklar={["Şube", "Öğretmen", "İlerleme Ort.", "Tamamlanma", "Hiç Başlamayan", "Tümünü Bitiren"]}>
+            <Tablo basliklar={[kirilimAdi, "Öğretmen", "İlerleme Ort.", "Tamamlanma", "Hiç Başlamayan", "Tümünü Bitiren"]}>
               {k.subeler.map((s) => (
                 <tr key={s.subeAdi}>
                   <th className="border-b border-tx-cizgi py-3 pr-2.5 text-left font-medium">{s.subeAdi}</th>

@@ -208,11 +208,11 @@ order by k.kesit_tarihi;
 
 Kümülatif sertifika eğrisi `report_sertifika_ay`'dan gelir ve kayıt tutmaya başlamadan önceki geçmişi de gösterir.
 
-### Adım 8 — "TÜMÜ" toplaması
+### Adım 8 — "TÜMÜ" toplaması ✅ (2026-09-09)
 
 Kurum seçicisine "TÜMÜ" eklenir. Toplama **kurum ortalamalarının ortalaması değil**, öğretmen sayısıyla ağırlıklı olur — §2'deki kuralın gereği.
 
-### Adım 9 — Temizlik
+### Adım 9 — Temizlik ✅ (2026-09-09)
 
 **Kod tarafı 2026-09-09'da yapıldı:** eski "Öğretmen Özeti" ve "Kurs Bazlı" sekmeleri ve onlara bağlı 9 dosya kaldırıldı; Raporlar sayfası tek işe (Kurum Takip) indi. Kurum Takip iki formatı da okuduğu için işlev kaybı yok, aynı veriyi farklı hesapla gösteren ikinci bir ekran da kalmadı.
 

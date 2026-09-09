@@ -391,3 +391,98 @@ export function kesitUretOzet(satirlar: OzetSatir[]): Kesit {
     uyarilar: { epostasizSatir, birlestirilenMukerrer, olcekDuzeltildi: false },
   };
 }
+
+/* ------------------------------------------------------- TÜMÜ toplaması --- */
+
+/** "TÜMÜ" satırının adı — kurum adlarıyla çakışmaması için tek noktada. */
+export const TUMU_ADI = "TÜMÜ — bütün kurumlar";
+
+/**
+ * Kurumları tek bir toplam "kurum"a indirger (PLAN §Adım 8).
+ *
+ * Kurallar:
+ * - Ortalamalar kurum ortalamalarının ortalaması DEĞİL, öğretmen sayısıyla
+ *   ağırlıklıdır. 12 öğretmenli bir kurum 940 öğretmenliyle aynı ağırlıkta
+ *   olamaz.
+ * - Eğitim sayısı TOPLANMAZ: aynı eğitim birçok kuruma atanıyor, toplamak
+ *   katlardı. Eğitim adlarının BİRLEŞİMİ alınır.
+ * - Bilinmeyen (null) bir değer varsa toplam da bilinmez. Kısmi toplam
+ *   "sertifika düştü" gibi okunurdu.
+ * - Şube kırılımı yerine KURUM kırılımı konur: 92 kurumun bütün şubelerini
+ *   tek listede göstermek okunmaz, kurum kırılımı ise tam da aranan şey.
+ */
+export function kurumlariBirlestir(kurumlar: KesitKurum[]): KesitKurum | null {
+  if (kurumlar.length === 0) return null;
+
+  const toplamOgretmen = kurumlar.reduce((a, k) => a + k.ogretmenSayisi, 0);
+  const agirlikli = (sec: (k: KesitKurum) => number) =>
+    toplamOgretmen === 0 ? 0
+      : kurumlar.reduce((a, k) => a + sec(k) * k.ogretmenSayisi, 0) / toplamOgretmen;
+
+  const sertifikaBilinmiyor = kurumlar.some((k) => k.sertifikaSayisi === null);
+  const sertifikaAlanBilinmiyor = kurumlar.some((k) => k.sertifikaAlan === null);
+
+  // Eğitimler ada göre birleşir; oran ham sayılardan YENİDEN hesaplanır,
+  // oranların ortalaması alınmaz.
+  const egitimHaritasi = new Map<string, KesitEgitim>();
+  for (const k of kurumlar) {
+    for (const e of k.egitimler) {
+      const v = egitimHaritasi.get(e.egitimAdi);
+      if (v) {
+        v.atananOgretmen += e.atananOgretmen;
+        v.tamamlayan += e.tamamlayan;
+        v.hicBaslamayan += e.hicBaslamayan;
+        v.sertifikaSayisi += e.sertifikaSayisi;
+      } else {
+        egitimHaritasi.set(e.egitimAdi, { ...e });
+      }
+    }
+  }
+  const egitimler = [...egitimHaritasi.values()]
+    .map((e) => ({
+      ...e,
+      tamamlanmaOrani: e.atananOgretmen === 0 ? 0 : (e.tamamlayan / e.atananOgretmen) * 100,
+    }))
+    .sort((a, b) => a.tamamlanmaOrani - b.tamamlanmaOrani);
+
+  const aylar = new Map<string, number>();
+  for (const k of kurumlar) {
+    for (const a of k.sertifikaAylik) aylar.set(a.ay, (aylar.get(a.ay) ?? 0) + a.adet);
+  }
+
+  return {
+    kaynak: kurumlar[0].kaynak,
+    kurumAdi: TUMU_ADI,
+    ogretmenSayisi: toplamOgretmen,
+    subeSayisi: kurumlar.reduce((a, k) => a + k.subeSayisi, 0),
+    egitimSayisi: kurumlar.some((k) => k.egitimSayisi === null) ? null : egitimHaritasi.size,
+    kayitSayisi: kurumlar.reduce((a, k) => a + k.kayitSayisi, 0),
+    ilerlemeOrtalamasi: agirlikli((k) => k.ilerlemeOrtalamasi),
+    tamamlanmaOrani: agirlikli((k) => k.tamamlanmaOrani),
+    tamamlananEgitim: kurumlar.reduce((a, k) => a + k.tamamlananEgitim, 0),
+    sertifikaSayisi: sertifikaBilinmiyor ? null : kurumlar.reduce((a, k) => a + (k.sertifikaSayisi ?? 0), 0),
+    sertifikaAlan: sertifikaAlanBilinmiyor ? null : kurumlar.reduce((a, k) => a + (k.sertifikaAlan ?? 0), 0),
+    hicBaslamayan: kurumlar.reduce((a, k) => a + k.hicBaslamayan, 0),
+    devamEden: kurumlar.reduce((a, k) => a + k.devamEden, 0),
+    tumunuTamamlayan: kurumlar.reduce((a, k) => a + k.tumunuTamamlayan, 0),
+    esitsizAtama: kurumlar.reduce((a, k) => a + k.esitsizAtama, 0),
+    // Şube yerine KURUM kırılımı — "şube" alanı burada kurumu taşır.
+    subeler: kurumlar
+      .map((k) => ({
+        subeAdi: k.kurumAdi,
+        ogretmenSayisi: k.ogretmenSayisi,
+        egitimSayisi: k.egitimSayisi,
+        ilerlemeOrtalamasi: k.ilerlemeOrtalamasi,
+        tamamlanmaOrani: k.tamamlanmaOrani,
+        sertifikaSayisi: k.sertifikaSayisi,
+        hicBaslamayan: k.hicBaslamayan,
+        devamEden: k.devamEden,
+        tumunuTamamlayan: k.tumunuTamamlayan,
+      }))
+      .sort((a, b) => b.ilerlemeOrtalamasi - a.ilerlemeOrtalamasi),
+    egitimler,
+    sertifikaAylik: [...aylar.entries()]
+      .map(([ay, adet]) => ({ ay, adet }))
+      .sort((a, b) => a.ay.localeCompare(b.ay)),
+  };
+}
