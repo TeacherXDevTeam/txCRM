@@ -156,3 +156,89 @@ export function eslesmeOzeti(sonuclar: EslesmeSonucu[]) {
     toplam:    sonuclar.length,
   };
 }
+
+/* ------------------------------------------------- hatırlanan kararlar --- */
+
+/** Bir kurum için kullanıcının kararı. */
+export type Karar =
+  | { tip: "okul"; schoolId: string }
+  | { tip: "yeni"; sehir: string }
+  | { tip: "yok" };
+
+/**
+ * Daha önce kaydedilmiş bir eşleştirme kararı.
+ * `schoolId: null` = kullanıcı bilerek "Bağlama" demiş — karar YOK demek değil.
+ */
+export interface OncekiKarar {
+  schoolId: string | null;
+  /** Kararın alındığı kesitin tarihi — ekranda gösterilir */
+  tarih: string;
+}
+
+export type KararDurumu =
+  /** Önceki kesitten hatırlandı — kullanıcıya sormaya gerek yok */
+  | "hatirlandi"
+  /** İlk kez görülüyor, ad birebir tutuyor */
+  | "otomatik"
+  /** İlk kez görülüyor, tek aday öne çıkıyor ama onay gerekir */
+  | "onay"
+  /** İlk kez görülüyor, karşılığı yok */
+  | "yeni";
+
+export interface HazirKararlar {
+  kararlar: Record<string, Karar>;
+  durumlar: Record<string, KararDurumu>;
+  eslesmeler: EslesmeSonucu[];
+}
+
+/**
+ * Başlangıç kararlarını üretir: önce HATIRLANAN karar, yoksa bulanık eşleştirme.
+ *
+ * Hatırlanan karar bulanık eşleştirmeyi ezer, çünkü kullanıcının elle verdiği
+ * karar algoritmanın tahmininden daha doğrudur — kullanıcı bir kurumu adı hiç
+ * benzemeyen bir okula bağlamış olabilir.
+ *
+ * Hatırlanan okul artık silinmişse karar düşer ve kurum yeniden sorulur;
+ * yoksa var olmayan bir id ile kaydetmeye çalışırdık.
+ */
+export function kararlariHazirla(
+  kurumAdlari: string[],
+  okullar: OkulAdayi[],
+  subeAdlari: Map<string, string[]>,
+  oncekiler: Record<string, OncekiKarar>,
+): HazirKararlar {
+  const eslesmeler = kurumlariEslestir(kurumAdlari, okullar);
+  const okulVar = new Set(okullar.map((o) => o.id));
+
+  const kararlar: Record<string, Karar> = {};
+  const durumlar: Record<string, KararDurumu> = {};
+
+  for (const e of eslesmeler) {
+    const onceki = oncekiler[e.raporKurum];
+    const hatirlanabilir =
+      onceki !== undefined &&
+      (onceki.schoolId === null || okulVar.has(onceki.schoolId));
+
+    if (hatirlanabilir) {
+      kararlar[e.raporKurum] = onceki.schoolId === null
+        ? { tip: "yok" }
+        : { tip: "okul", schoolId: onceki.schoolId };
+      durumlar[e.raporKurum] = "hatirlandi";
+      continue;
+    }
+
+    kararlar[e.raporKurum] = e.okul
+      ? { tip: "okul", schoolId: e.okul.id }
+      : { tip: "yeni", sehir: sehirTahminEt(e.raporKurum, subeAdlari.get(e.raporKurum) ?? []) ?? "" };
+    durumlar[e.raporKurum] = e.okul
+      ? (e.guven === "kesin" ? "otomatik" : "onay")
+      : "yeni";
+  }
+
+  return { kararlar, durumlar, eslesmeler };
+}
+
+/** Kullanıcıya sorulması gereken kurum sayısı — 0 ise eşleştirme ekranı atlanabilir. */
+export function ilgiGerekenSayisi(durumlar: Record<string, KararDurumu>): number {
+  return Object.values(durumlar).filter((d) => d !== "hatirlandi").length;
+}
