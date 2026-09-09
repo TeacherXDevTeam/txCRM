@@ -89,6 +89,14 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
         setKaynakSatir(sonuc.kaynakSatir);
         setKesit(k);
         setKayitliMi(false);
+        /*
+         * Tarih, kayıtlı kesitin tarihiyle açılıyor. Yeni bir dosya
+         * seçildiğinde o tarihte bırakmak tehlikeli: kullanıcı tarihi
+         * değiştirmeyi unutursa kaydetme, aynı tarihli mevcut kesiti SİLİP
+         * yerine bunu yazar (kesitKaydet önce delete ediyor). Geçmiş dönem
+         * dosyası yüklerken tam da bu olurdu. Bugüne çekiliyor.
+         */
+        setKesitTarihi(new Date().toISOString().slice(0, 10));
         setGorunum({ tip: "karsilastirma" });
       } catch (err) {
         setKesit(null);
@@ -163,6 +171,9 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
     () => (kesit ? kurumlariBirlestir(kesit.kurumlar) : null),
     [kesit]
   );
+
+  /** Seçilen tarihte zaten kayıtlı bir kesit var mı — varsa üzerine yazılır. */
+  const cakisanKesit = (trend?.kesitler ?? []).find((k) => k.tarih === kesitTarihi) ?? null;
 
   const secili = kesit && gorunum.tip === "kurum"
     ? (gorunum.kurumAdi === TUMU_ADI
@@ -254,6 +265,15 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
         {hata && (
           <p className="mt-3 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2 text-sm text-tx-metin">
             {hata}
+          </p>
+        )}
+
+        {kesit && cakisanKesit && !kayitliMi && (
+          <p className="mt-3 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2 text-[13px] text-tx-metin">
+            <b className="font-medium">{formatDate(cakisanKesit.tarih)}</b> tarihinde zaten kayıtlı bir
+            kesit var ({tr(cakisanKesit.kurumSayisi)} kurum). Kaydederseniz o kesit{" "}
+            <b className="font-medium">silinip</b> bunun yerine yazılır. Geçmiş dönem yüklüyorsanız
+            kesit tarihini o dönemin tarihine çevirin.
           </p>
         )}
 
