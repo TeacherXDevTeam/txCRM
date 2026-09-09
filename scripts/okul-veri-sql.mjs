@@ -29,8 +29,17 @@ const KAYIT_SAHIBI =
 const DURUMLAR = new Set(["aktif", "suresi_doldu", "iptal"]);
 const ODEMELER = new Set(["odeme_bekleniyor", "kismi", "tamamlandi"]);
 
-const [, , dosya] = process.argv;
-if (!dosya) { console.error("\n  Kullanım: node scripts/okul-veri-sql.mjs <okul-veri-girisi.xlsx>\n"); process.exit(1); }
+const argv = process.argv.slice(2);
+const bi = argv.indexOf("--bitis");
+const varsayilanBitisHam = bi >= 0 ? argv[bi + 1] : null;
+if (bi >= 0) argv.splice(bi, 2);
+const [dosya] = argv;
+
+if (!dosya) {
+  console.error("\n  Kullanım: node scripts/okul-veri-sql.mjs <okul-veri-girisi.xlsx> [--bitis GG.AA.YYYY]");
+  console.error("    --bitis: başlangıcı olup bitişi boş bırakılan satırlar için ortak bitiş tarihi\n");
+  process.exit(1);
+}
 if (!existsSync(dosya)) { console.error(`\n  ✗ Bulunamadı: ${dosya}\n`); process.exit(1); }
 
 const wb = xlsx.read(readFileSync(dosya));
@@ -49,7 +58,7 @@ const sayi = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 /** "GG.AA.YYYY" ya da Excel tarih sayısı → "YYYY-MM-DD" */
-const tarih = (v) => {
+function tarihCevir(v) {
   const s = metin(v);
   if (!s) return null;
   let m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
@@ -73,6 +82,18 @@ const tarih = (v) => {
 const OKUL_DURUMLARI = new Set(["aktif", "pasif", "potansiyel"]);
 const YALNIZ_OKUL = new Set(["pasif", "potansiyel"]);
 
+/*
+ * Ortak bitiş tarihi. Kullanıcının dosyasında 84 satırda başlangıç vardı ama
+ * bitiş yoktu ve hepsi aynı gün başlıyordu; her satırı elle doldurtmak yerine
+ * bir kez verilir. YALNIZ BOŞ OLANLARA uygulanır — dosyada yazan bir bitiş
+ * tarihi asla ezilmez.
+ */
+const varsayilanBitis = varsayilanBitisHam ? tarihCevir(varsayilanBitisHam) : null;
+if (varsayilanBitisHam && !varsayilanBitis) {
+  console.error(`\n  ✗ --bitis değeri okunamadı: "${varsayilanBitisHam}" (GG.AA.YYYY bekleniyor)\n`);
+  process.exit(1);
+}
+
 const uyarilar = [];
 const okulGuncelle = [];
 const okulDurumu = [];
@@ -93,8 +114,9 @@ for (const [i, r] of sayfa("Okul ve Sözleşme").entries()) {
     okulGuncelle.push(`update schools set ${set.join(", ")}, updated_at = now() where id = ${q(id)};  -- ${ad}`);
   }
 
-  const bas = tarih(r["Sözleşme Başlangıç (GG.AA.YYYY)"]);
-  const bit = tarih(r["Sözleşme Bitiş (GG.AA.YYYY)"]);
+  const bas = tarihCevir(r["Sözleşme Başlangıç (GG.AA.YYYY)"]);
+  // Dosyadaki bitiş önceliklidir; yoksa --bitis devreye girer
+  const bit = tarihCevir(r["Sözleşme Bitiş (GG.AA.YYYY)"]) ?? (bas ? varsayilanBitis : null);
   const bekl = bos(r["Beklenen Öğretmen"]) ? null : sayi(r["Beklenen Öğretmen"]);
   const durum = metin(r["Sözleşme Durumu"]) || "aktif";
   const odeme = metin(r["Ödeme Durumu"]) || "odeme_bekleniyor";
@@ -142,7 +164,8 @@ for (const [i, r] of sayfa("Okul ve Sözleşme").entries()) {
       `${bekl ?? "null"}, ${q(durum)}, ${q(odeme)}${not ? `, ${q(not)}` : ""});  -- ${ad}`
     );
   } else if (bas || bit) {
-    uyarilar.push(`satır ${satirNo} (${ad}): sözleşme tarihlerinden yalnız biri dolu — yazılmadı`);
+    uyarilar.push(`satır ${satirNo} (${ad}): sözleşme tarihlerinden yalnız biri dolu — yazılmadı` +
+      (bas && !varsayilanBitis ? ` (--bitis ile ortak bir bitiş tarihi verebilirsiniz)` : ""));
   } else if (bekl !== null) {
     uyarilar.push(`satır ${satirNo} (${ad}): beklenen öğretmen yazıldı ama sözleşme tarihleri boş. ` +
                   `Bu alan sözleşmede tutuluyor, sözleşme olmadan kaydedilemez.`);
@@ -175,6 +198,9 @@ parcalar.push(`-- Üretim: ${new Date().toISOString().slice(0, 10)}`);
 parcalar.push(`--`);
 parcalar.push(`-- Tamamı TEK TRANSACTION. Bir satır patlarsa hiçbiri yazılmaz.`);
 parcalar.push(`-- Boş bırakılan alanlar yazılmaz; mevcut değerlerin üzerine boş geçilmez.`);
+if (varsayilanBitis) {
+  parcalar.push(`-- Bitişi boş bırakılan sözleşmelere ortak bitiş tarihi: ${varsayilanBitis}`);
+}
 parcalar.push(``);
 parcalar.push(`begin;`);
 parcalar.push(``);
