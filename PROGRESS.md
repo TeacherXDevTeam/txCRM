@@ -4,7 +4,7 @@
 
 ## Şu Anki Durum
 
-**Faz:** Faz 1 tamamlandı (10 modül canlı) · Faz 2 İş 1 ✅ · **Kurum Takip Panosu** devam ediyor (`PLAN_KURUM_TAKIP_PANOSU.md`, 9 adımın 7'si bitti)
+**Faz:** Faz 1 tamamlandı (10 modül canlı) · Faz 2 İş 1 ✅ · **Kurum Takip Panosu ✅ tamamlandı** (9/9 adım, canlıda) → sıradaki: Faz 2 İş 2
 **Son güncelleme:** 2026-09-09
 **Deploy:** Vercel — çalışıyor (bir dönem push'ları almıyordu, düzeldi)
 **Sağlık:** `npm run type-check` ✅ · `npm run build` ✅ · `npm run lint` ✅ (0 hata, 35 uyarı — hepsi kapsam dışı eski modüllerde)
@@ -82,8 +82,8 @@ Plan: `PLAN_KURUM_TAKIP_PANOSU.md`. Excel'deki 10 sayfalık takip panosunun CRM 
 | 5 | Kurum Raporu (markalı, isimsiz, PDF) | ✅ |
 | 6 | Şube ve Eğitim Analizi sekmeleri | ✅ |
 | 7 | Aylık Takip — kesitler arası zaman serisi | ✅ PR #19 |
-| 8 | "TÜMÜ" toplaması (kurum seçicisinde) | ⬜ sıradaki |
-| 9 | Temizlik — `report_uploads` / `report_kurum_stats` DROP | ⬜ kod tarafı bitti, tablolar duruyor |
+| 8 | "TÜMÜ" toplaması (kurum seçicisinde) | ✅ PR #25 |
+| 9 | Temizlik — `report_uploads` / `report_kurum_stats` DROP | ✅ PR #25, migration canlıda çalıştırıldı |
 
 **Hesap kuralları (bozma):** kurum ortalaması **öğretmen düzeyinden** hesaplanır (şube ortalamalarının ortalaması değil); kurumlar arası toplam **öğretmen sayısıyla ağırlıklı**; Aylık Takip'te varsayılan **sabit sepet** (sonradan eklenen kurum toplamı aşağı çeker); bilinmeyen değer `null` kalır, 0 yazılmaz.
 
@@ -101,21 +101,17 @@ _Yok._
 | API route yok | Tüm mutation'lar tarayıcıdan doğrudan Supabase'e; güvenlik tamamen RLS'e bağlı | Değerlendirilecek |
 | Supabase CLI yetkisi | Giriş yapılan hesap `gttoevyxkpjhlxglsomd` projesine erişemiyor → `gen types` çalışmıyor, `types/database.ts` elle güncelleniyor | Kullanıcı aksiyonu |
 | Service role key | `.env.local`'deki `SUPABASE_SERVICE_ROLE_KEY` aslında *publishable* bir anahtar (`sb_publishab…`). Uygulama kodu kullanmıyor, ama seed betikleri çalışmaz ve **yerelden üretim verisi okunamaz** — sorgular hata değil, boş dizi döner | Kullanıcı aksiyonu |
-| Eski rapor tabloları | `report_uploads` / `report_kurum_stats` kodda artık kullanılmıyor ama DB'de duruyor. Adım 3 canlıda doğrulandı, `DROP TABLE` migration'ı yazılabilir | Kurum Takip Adım 9 |
 | Kurum verisi boşlukları | Onboarding checklist genişletme, ürün/abonelik modeli, şehir zenginleştirme | `PLAN_KURUM_VERISI.md` (onay bekliyor) |
 
 ## Sonraki Adımlar
 
-**Önce `PLAN_KURUM_TAKIP_PANOSU.md` bitirilecek:**
-1. **Okul detay sayfası** — `/okullar/[id]` üzerinde o kurumun kesit verisi *(sıradaki)*
-2. **Adım 8** — kurum seçicisine "TÜMÜ" (ağırlıklı toplam)
-3. **Adım 9** — `report_uploads` / `report_kurum_stats` DROP migration'ı
+~~`PLAN_KURUM_TAKIP_PANOSU.md`~~ ✅ 9/9 tamamlandı, canlıda.
 
-**Sonra `PLAN_FOUNDATION_FAZ2.md`:**
+**`PLAN_FOUNDATION_FAZ2.md`:**
 1. ~~**İş 1** — `types/database.ts` yenileme + tipsiz client temizliği~~ ✅ 2026-09-09 (PR #16)
-2. **İş 2** — Kazanılan lead → sözleşme köprüsü (trigger + fan-out bildirim)
+2. **İş 2** — Kazanılan lead → sözleşme köprüsü (trigger + fan-out bildirim) *(sıradaki)*
 3. **İş 3+4** — Sözleşme bitiş & lead durgunluk hatırlatma cron'ları (pg_cron)
-4. **İş 5** — Dashboard
+4. **İş 5** — Dashboard. **DİKKAT:** planın bu maddesi `report_uploads` / `report_kurum_stats`'a dayanıyor; o tablolar silindi. Sıra gelince kesit tablolarına (`report_kesit` / `report_kurum`) göre yeniden yazılacak.
 
 **Sonra:** `PLAN_KURUM_VERISI.md` İş A → B → C (onay sonrası)
 

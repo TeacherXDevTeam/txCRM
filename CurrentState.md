@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Kurum Takip Panosu kapandı (2026-09-09)
+PR #24 ve #25 merge edildi, Production `8246a9a`'ya çıktı, DROP migration'ı canlıda çalıştırıldı — `report_uploads` ve `report_kurum_stats` artık 404, kesit tabloları ayakta. Kullanıcı düzeltme turunu tamamladı. `PLAN_KURUM_TAKIP_PANOSU.md`'nin 9 adımı bitti; PROGRESS.md buna göre güncellendi ve İş 5'in kesit tablolarına göre yeniden yazılması gerektiği not olarak eklendi (plan silinen tablolara dayanıyordu). Sıradaki: Faz 2 İş 2 — kazanılan lead → sözleşme köprüsü.
+
 ### Son İşlem — Adım 8 (TÜMÜ) + Adım 9 (temizlik) — Kurum Takip kapandı (2026-09-09)
 Kurum seçicisine "TÜMÜ — bütün kurumlar" eklendi; seçilince aynı markalı kurum raporu bütün kurumların toplamı için üretiliyor ve PDF'e basılabiliyor. Üç kural: ortalamalar öğretmen sayısıyla **ağırlıklı** (düz ortalama 92 kurumu eşit sayardı), **eğitim sayısı toplanmaz** — aynı eğitim birçok kuruma atandığı için adların BİRLEŞİMİ alınır (sentetik veride 92×5=460 değil 7 çıkıyor), ve eğitim oranları ham sayıdan yeniden hesaplanır, oranların ortalaması alınmaz. Bilinmeyen tek bir değer varsa toplam da bilinmiyor kalıyor. Şube kırılımı yerine KURUM kırılımı konuyor — 92 kurumun 273 şubesini tek listede göstermek okunmazdı; başlıklar, KPI etiketi ve alt başlık toplam modunda buna göre değişiyor. 23 birim kontrolü + 92 kurumluk sentetik veriyle tarayıcı doğrulaması. Adım 9: `report_uploads` ve `report_kurum_stats` için DROP migration'ı yazıldı (kodda referansı kalmamıştı) ve `types/database.ts`'ten çıkarıldı; migration silmeden önce satır sayısını gösteren doğrulama sorgusunu içeriyor. Böylece PLAN_KURUM_TAKIP_PANOSU.md'nin 9 adımı tamamlandı.
 
