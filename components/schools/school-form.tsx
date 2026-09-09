@@ -25,7 +25,8 @@ export function SchoolForm({ school, onClose }: SchoolFormProps) {
     name:                  school?.name                  ?? "",
     city:                  school?.city                  ?? "",
     district:              school?.district              ?? "",
-    school_type:           school?.school_type           ?? "devlet",
+    // TeacherX'in çalıştığı kurumların tamamı özel; varsayılan buna göre
+    school_type:           school?.school_type           ?? "ozel",
     status:                school?.status                ?? "potansiyel",
     partnership_start_date: school?.partnership_start_date ?? "",
     notes:                 school?.notes                 ?? "",

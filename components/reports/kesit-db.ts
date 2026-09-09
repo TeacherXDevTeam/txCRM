@@ -170,6 +170,10 @@ export async function kesitSil(kesitId: string): Promise<void> {
  *
  * Mevcut bir okul bulunursa DURUMUNA DOKUNULMAZ: kullanıcının elle yaptığı
  * işaretleme bir içe aktarmayla ezilmemeli.
+ *
+ * Okul tipi 'ozel' yazılır. Şema varsayılanı 'devlet' ve TeacherX'in
+ * çalıştığı kurumların tamamı özel; varsayılana bırakmak her yeni kaydı
+ * yanlış etiketliyordu.
  */
 export type OkulDurumu = "aktif" | "pasif" | "potansiyel";
 
@@ -190,7 +194,7 @@ export async function okulOlustur(
 
   const { data, error } = await sb
     .from("schools")
-    .insert({ name: temizAd, city: sehir, status: durum })
+    .insert({ name: temizAd, city: sehir, status: durum, school_type: "ozel" })
     .select("id")
     .single();
   if (error || !data) throw new Error(`"${temizAd}" okulu oluşturulamadı: ${error?.message ?? "bilinmeyen hata"}`);

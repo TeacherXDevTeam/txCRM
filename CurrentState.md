@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Okul tipi varsayılanı 'ozel' (2026-09-09)
+Kullanıcı okullarının tamamının özel olduğunu söyledi. Şema varsayılanı 'devlet' olduğu için tipi belirtilmeden açılan her kayıt — özellikle rapor içe aktarmasıyla açılanlar — yanlış etiketleniyordu (listede Bilge Montessori, Bayetav, BİLNET "Devlet" görünüyordu). Üç yerde düzeltildi: `okulOlustur` artık açıkça 'ozel' yazıyor, okul formunun varsayılanı 'ozel' oldu, ve `20260909200000_okul_tipi_varsayilani.sql` şema varsayılanını değiştiriyor. Migration mevcut satırlara DOKUNMUYOR; geçmişi düzeltmek ayrı ve isteğe bağlı: `supabase/sorgular/okul_tipi_duzelt.sql` önce dağılımı gösteriyor, sonra 'devlet' görünenleri listeliyor (gerçek bir devlet okulu varsa ayrılabilsin), sonra çeviriyor. İkisi de yerel Postgres'te gerçek şemayla sınandı: tip belirtilmeden açılan kayıt 'ozel' doğdu, düzeltme sorgusu eski kaydı çevirdi.
+
 ### Son İşlem — Okul formu şehri uyduruyordu (2026-09-09)
 Kullanıcı "elle düzelttiklerim DB'ye yazılmıyor mu?" diye sordu. Form incelendi: status DOĞRU yazılıyor, hata olsa ekranda görünürdü; ekran görüntüsünde de BİLNET "Pasif" duruyor. Yani elle düzeltmeler işliyor, CSV muhtemelen o düzeltmeden önce alınmış. Ama aynı formda gerçek bir kusur çıktı: `city: form.city.trim() || "İstanbul"`. Şehri boş bir okulu BAŞKA bir sebeple düzenleyip kaydetmek (ör. durumunu Pasif yapmak) şehri sessizce İstanbul yazıyordu. Kullanıcının ekran görüntüsündeki "BİLNET · İstanbul" büyük olasılıkla böyle oluştu. Fallback kaldırıldı; boş şehir boş kalıyor (schools.city NOT NULL ama boş string'e izin veriyor) ve "Profil Tamamlama"da eksik olarak görünüp düzeltiliyor. İlke: yanlış veri, eksik veriden kötüdür — eksik olan görünür, yanlış olan doğru sanılır.
 
