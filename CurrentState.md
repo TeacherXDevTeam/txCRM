@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Üzerine yazma artık onay istiyor (2026-09-09)
+Uyarı yetmedi: kullanıcı geçmiş dönem dosyasını tarihi değiştirmeden kaydetti ve güncel kesit silindi. Uyarı okunmadan geçilebilecek bir metindi; kaza olabilecek bir işlem bilinçli bir onay gerektirmeli. Artık seçilen tarihte kayıtlı kesit varsa hem Kaydet hem Eşleştirme düğmesi KAPALI; açılması için "… kesitinin silinmesini onaylıyorum" kutusu işaretlenmeli. Onay, tarih değişince ve yeni dosya seçilince sıfırlanıyor. Tarayıcıda gerçek dosya yüklenerek doğrulandı: çakışan tarihte iki düğme de kapalı, onaydan sonra ikisi de açık; tarih 13.07.2026 yapılınca uyarı ve kutu kayboluyor, düğmeler onaysız açık; çakışan tarihe geri dönülünce onay sıfırlanıp düğmeler tekrar kapanıyor. Kullanıcının kaybı kurtarılabilir: iki kaynak Excel de yerinde (20.655 ve 23.108 satır), doğru tarihlerle yeniden yüklenerek geri alınıyor.
+
 ### Son İşlem — Kesit tarihi tuzağı kapatıldı (2026-09-09)
 Kullanıcı geçmiş dönem dosyasını nereye yükleyeceğini sordu; akışı anlatmadan önce kontrol edilince veri kaybettirecek bir tuzak bulundu. `kesitTarihi` state'i kayıtlı kesitin tarihiyle açılıyor ve yeni dosya seçilince SIFIRLANMIYORDU; `kesitKaydet` ise aynı tarihli kesiti önce siliyor. Yani geçmiş dönem dosyası yüklenip tarih değiştirilmeden kaydedilse, güncel kesit silinip yerine eski veri yazılacaktı — sessizce. İki düzeltme: (1) yeni dosya seçilince tarih bugüne çekiliyor; (2) seçilen tarihte kayıtlı kesit varsa üzerine yazılacağını söyleyen kırmızı uyarı çıkıyor, kurum sayısıyla birlikte. Tarayıcıda gerçek dosya yükleyerek uçtan uca doğrulandı: X → dosya seç → uyarı çıktı ("09.09.2026 tarihinde zaten kayıtlı bir kesit var (2 kurum)… Geçmiş dönem yüklüyorsanız kesit tarihini o dönemin tarihine çevirin"), tarih 2026-07-13 yapılınca uyarı kayboldu, geri alınınca tekrar çıktı.
 
