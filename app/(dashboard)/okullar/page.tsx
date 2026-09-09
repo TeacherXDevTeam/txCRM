@@ -30,10 +30,17 @@ export default async function OkullarPage() {
   }
 
   const incomplete: IncompleteSchool[] = [];
-  const missingCounts: Record<string, number> = { "Konum": 0, "Koordinatör": 0, "Sözleşme": 0, "Beklenen öğretmen": 0 };
+  const missingCounts: Record<string, number> = { "Koordinatör": 0, "Sözleşme": 0, "Beklenen öğretmen": 0 };
   for (const s of schools) {
     const missing: string[] = [];
-    if (!s.district || !s.city || s.city === "Belirtilmedi") missing.push("Konum");
+    /*
+     * KONUM ARTIK PROFİL TAMAMLAMA ŞARTI DEĞİL. Kural il VE ilçe istiyordu;
+     * rapordan gelen kurumların çoğunda ilçe anlamlı bir bilgi değil ve o
+     * rozet 101 okulda kalıcı olarak açık kalıyordu. Sürekli açık kalan bir
+     * uyarı, bakılmayan bir uyarıdır — asıl eksikleri de gizler.
+     * Konum bilgisi duruyor, okul detayında ve listede görünüyor;
+     * yalnızca "profil tamam mı" hesabına girmiyor.
+     */
     if (!coordSet.has(s.id)) missing.push("Koordinatör");
     if (!contractSet.has(s.id)) missing.push("Sözleşme");
     if (!expectedSet.has(s.id)) missing.push("Beklenen öğretmen");
