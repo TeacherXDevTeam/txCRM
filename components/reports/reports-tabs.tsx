@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { GraduationCap, Users } from "lucide-react";
+import { GraduationCap, Users, LayoutDashboard } from "lucide-react";
 import { ReportUpload } from "./report-upload";
 import { ReportDashboard } from "./report-dashboard";
 import { TeacherReportUpload } from "./teacher-report-upload";
 import { TeacherReportDashboard } from "./teacher-report-dashboard";
 import { ClearUploadButton } from "./clear-upload-button";
+import { KesitPanosu } from "./kesit-panosu";
 import type { KurumStats } from "./report-client";
 import type { TeacherKurumStats, TeacherRow } from "./teacher-report-client";
 
-export type ReportFormat = "ogretmen" | "kurs";
+export type ReportFormat = "kesit" | "ogretmen" | "kurs";
 
 export interface UploadInfo {
   id: string;
@@ -27,6 +28,7 @@ interface Props {
 }
 
 const TABS: { key: ReportFormat; label: string; hint: string; icon: typeof Users }[] = [
+  { key: "kesit", label: "Kurum Takip", hint: "Tüm kurumlar tek dosyada · karşılaştırma ve kurum raporu", icon: LayoutDashboard },
   { key: "ogretmen", label: "Öğretmen Özeti", hint: "Adı Soyadı · Tamamlanan · Devam Eden · Tamamlama %", icon: Users },
   { key: "kurs", label: "Kurs Bazlı", hint: "Ad · Soyad · Kurs · İlerleme Yüzdesi · Sertifika Tarihi", icon: GraduationCap },
 ];
@@ -36,13 +38,7 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
   // çıktısı için bellekte tutulur, hiçbir zaman kaydedilmez.
   const [oturumSatirlari, setOturumSatirlari] = useState<TeacherRow[]>([]);
   // Hangi sekmede daha yeni yükleme varsa onunla aç
-  const [tab, setTab] = useState<ReportFormat>(() => {
-    const t = teacher.upload?.uploaded_at;
-    const c = course.upload?.uploaded_at;
-    if (t && c) return t >= c ? "ogretmen" : "kurs";
-    if (c && !t) return "kurs";
-    return "ogretmen";
-  });
+  const [tab, setTab] = useState<ReportFormat>("kesit");
 
   const active = tab === "ogretmen" ? teacher : course;
 
@@ -54,7 +50,8 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
           {TABS.map((t) => {
             const Icon = t.icon;
             const isActive = tab === t.key;
-            const count = t.key === "ogretmen" ? teacher.kurumStats.length : course.kurumStats.length;
+            const count = t.key === "kesit" ? 0
+              : t.key === "ogretmen" ? teacher.kurumStats.length : course.kurumStats.length;
             return (
               <button
                 key={t.key}
@@ -77,7 +74,7 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
             );
           })}
         </div>
-        {active.upload && (
+        {tab !== "kesit" && active.upload && (
           <div className="pb-2">
             <ClearUploadButton
               format={tab}
@@ -88,7 +85,9 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
         )}
       </div>
 
-      {tab === "ogretmen" ? (
+      {tab === "kesit" ? (
+        <KesitPanosu />
+      ) : tab === "ogretmen" ? (
         <>
           <TeacherReportUpload currentUserId={currentUserId} onYuklendi={setOturumSatirlari} />
           {teacher.kurumStats.length === 0 ? (
