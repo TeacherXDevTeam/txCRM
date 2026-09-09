@@ -6,7 +6,7 @@ import { Select } from "@/components/ui/select";
 import { tr, tr1 } from "./brand";
 import { formatDate } from "@/lib/utils";
 import {
-  METRIKLER, kisaAy, metrikDegeri, zamanKonumlari,
+  METRIKLER, kisaAy, metrikDegeri, zamanKonumlari, egitimYili, egitimYiliSinirlari, gunNumarasi,
   type MetrikAnahtar, type Trend, type TrendHucre,
 } from "./kesit-trend";
 
@@ -66,6 +66,19 @@ function CizgiGrafik({
   const yy = (d: number) => G.ust + boy - (d / tavan) * boy;
 
   /*
+   * Eğitim öğretim yılı sınırları (1 Ağustos). Yıl takvim yılı değil;
+   * sözleşme dönemi de buna göre işliyor, bu yüzden "geçen yıl" karşılaştırması
+   * ancak ayraçlar görünürse okunur olur.
+   */
+  const gunler = tarihler.map(gunNumarasi);
+  const enAzGun = Math.min(...gunler), enCokGun = Math.max(...gunler);
+  const gunAraligi = enCokGun - enAzGun;
+  const sinirX = (t: string) =>
+    gunAraligi === 0 ? G.sol + cizim / 2
+      : G.sol + ((gunNumarasi(t) - enAzGun) / gunAraligi) * cizim;
+  const yilSinirlari = egitimYiliSinirlari(tarihler);
+
+  /*
    * Noktalar zaman ekseninde kümelenebilir (12 aylık kesit + 1 yıl öncesi).
    * Üst üste binen etiket okunmaz; ilk ve son daima yazılır, aradakiler
    * yalnız yeterli boşluk varsa.
@@ -92,6 +105,16 @@ function CizgiGrafik({
     <div className="overflow-x-auto rounded bg-white px-2 py-4">
       <svg viewBox={`0 0 ${G.g} ${G.y}`} className="min-w-[560px] w-full" role="img"
            aria-label="Kesitler arası değişim grafiği">
+        {yilSinirlari.map((y) => (
+          <g key={y.tarih}>
+            <line x1={sinirX(y.tarih)} x2={sinirX(y.tarih)} y1={G.ust} y2={G.ust + boy}
+                  stroke="#C9C6C0" strokeWidth="1" strokeDasharray="3 3" />
+            <text x={sinirX(y.tarih) + 4} y={G.ust + 10} fontSize="10" fill="#6B6B6B">
+              {y.etiket}
+            </text>
+          </g>
+        ))}
+
         {yEksen.map((d) => (
           <g key={d}>
             <line x1={G.sol} x2={G.g - G.sag} y1={yy(d)} y2={yy(d)}
@@ -131,7 +154,7 @@ function CizgiGrafik({
               ))}
               {s.noktalar.map((d, i) => d === null ? null : (
                 <circle key={i} cx={x(i)} cy={yy(d)} r={s.kalinlik + 1.5} fill={s.renk}>
-                  <title>{`${s.ad}\n${etiketler[i]}\n${bicim(d, yuzde)}`}</title>
+                  <title>{`${s.ad}\n${etiketler[i]} · ${egitimYili(tarihler[i])}\n${bicim(d, yuzde)}`}</title>
                 </circle>
               ))}
             </g>
@@ -205,6 +228,10 @@ export function KesitAylikTakip({ trend }: { trend: Trend }) {
           <h2 className="font-baslik text-lg font-semibold text-tx-metin">Aylık Takip</h2>
           <p className="text-[12.5px] text-tx-gri">
             {tr(kesitler.length)} kesit · {formatDate(kesitler[0].tarih)} → {formatDate(kesitler[kesitler.length - 1].tarih)}
+            {" · "}
+            {egitimYili(kesitler[0].tarih) === egitimYili(kesitler[kesitler.length - 1].tarih)
+              ? `${egitimYili(kesitler[0].tarih)} eğitim yılı`
+              : `${egitimYili(kesitler[0].tarih)} → ${egitimYili(kesitler[kesitler.length - 1].tarih)} eğitim yılları`}
             {" · "}Bir kuruma tıklayarak grafiğe ekleyin
           </p>
         </div>
@@ -244,6 +271,7 @@ export function KesitAylikTakip({ trend }: { trend: Trend }) {
               {kesitler.map((k) => (
                 <th key={k.id} className="whitespace-nowrap px-3 py-2.5 text-right text-[12px] font-medium text-tx-gri">
                   {formatDate(k.tarih)}
+                  <i className="block text-[10px] not-italic opacity-70">{egitimYili(k.tarih)}</i>
                   <i className="block text-[10px] not-italic opacity-70">{tr(k.kurumSayisi)} kurum</i>
                 </th>
               ))}

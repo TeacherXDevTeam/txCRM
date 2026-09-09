@@ -245,3 +245,58 @@ export function zamanKonumlari(tarihler: string[]): number[] {
   if (aralik === 0) return gunler.map(() => 0.5);
   return gunler.map((g) => (g - ilk) / aralik);
 }
+
+/* --------------------------------------------------- eğitim öğretim yılı --- */
+
+/**
+ * Eğitim öğretim yılının başladığı ay (1–12).
+ *
+ * TeacherX'te yıl takvim yılı değil: Ağustos'ta başlar, Temmuz'da biter.
+ * Sözleşme/anlaşma dönemi de buna göre işliyor, yani bir kurumun "geçen yılı"
+ * 1 Ocak'tan değil 1 Ağustos'tan bölünür. Tek yerde tanımlı ki dönem
+ * değişirse burası düzeltilsin.
+ */
+export const EGITIM_YILI_BASLANGIC_AYI = 8;
+
+/**
+ * Tarihin ait olduğu eğitim öğretim yılı — "2025-26" biçiminde.
+ *
+ * 2025-08-01 … 2026-07-31 → "2025-26"
+ * 2026-07-31 → "2025-26"  (temmuz hâlâ önceki yıl)
+ * 2026-08-01 → "2026-27"
+ */
+export function egitimYili(tarih: string): string {
+  const yil = Number(tarih.slice(0, 4));
+  const ay = Number(tarih.slice(5, 7));
+  const bas = ay >= EGITIM_YILI_BASLANGIC_AYI ? yil : yil - 1;
+  return `${bas}-${String((bas + 1) % 100).padStart(2, "0")}`;
+}
+
+/** Eğitim yılının başladığı gün — "YYYY-08-01". */
+export function egitimYiliBaslangici(egitimYiliEtiketi: string): string {
+  const bas = Number(egitimYiliEtiketi.slice(0, 4));
+  return `${bas}-${String(EGITIM_YILI_BASLANGIC_AYI).padStart(2, "0")}-01`;
+}
+
+/**
+ * Verilen tarih aralığına düşen eğitim yılı SINIRLARINI verir — grafikte
+ * dikey ayraç çizmek için. İlk kesitin ait olduğu yılın başlangıcı dahil
+ * edilmez; aralığın içine düşen geçişler döner.
+ */
+export function egitimYiliSinirlari(tarihler: string[]): { tarih: string; etiket: string }[] {
+  if (tarihler.length < 2) return [];
+  const gunler = tarihler.map(gunNumarasi);
+  const enAz = Math.min(...gunler), enCok = Math.max(...gunler);
+
+  const ilkYil = Number(egitimYili(tarihler[gunler.indexOf(enAz)]).slice(0, 4));
+  const sonYil = Number(egitimYili(tarihler[gunler.indexOf(enCok)]).slice(0, 4));
+
+  const sonuc: { tarih: string; etiket: string }[] = [];
+  for (let y = ilkYil + 1; y <= sonYil; y++) {
+    const etiket = `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+    const t = egitimYiliBaslangici(etiket);
+    const g = gunNumarasi(t);
+    if (g > enAz && g < enCok) sonuc.push({ tarih: t, etiket });
+  }
+  return sonuc;
+}
