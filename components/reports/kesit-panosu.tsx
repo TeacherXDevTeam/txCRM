@@ -69,6 +69,8 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
    * yetmiyor: bağlanmamış kurumların verisi Okullar tarafında görünmez ve
    * kullanıcı bunu ekran atlandığı için hiç fark etmeyebilir.
    */
+  /** Üzerine yazma açıkça onaylandı mı — çakışan tarihte Kaydet'i açan tek şey. */
+  const [uzerineYazOnayi, setUzerineYazOnayi] = useState(false);
   const [atlandiBilgisi, setAtlandiBilgisi] =
     useState<{ toplam: number; bagli: number; baglanmamis: number } | null>(null);
 
@@ -97,6 +99,7 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
          * dosyası yüklerken tam da bu olurdu. Bugüne çekiliyor.
          */
         setKesitTarihi(new Date().toISOString().slice(0, 10));
+        setUzerineYazOnayi(false);
         setGorunum({ tip: "karsilastirma" });
       } catch (err) {
         setKesit(null);
@@ -235,7 +238,7 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
                 <input
                   type="date"
                   value={kesitTarihi}
-                  onChange={(e) => setKesitTarihi(e.target.value)}
+                  onChange={(e) => { setKesitTarihi(e.target.value); setUzerineYazOnayi(false); }}
                   className="h-9 rounded-md border border-tx-cizgi bg-white px-3 text-sm"
                 />
               </div>
@@ -247,12 +250,18 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
               */}
               <button
                 onClick={() => { setKayitHatasi(null); setAtlandiBilgisi(null); setEslestirmede(true); }}
-                disabled={kaydediliyor}
+                disabled={kaydediliyor || (!kayitliMi && !!cakisanKesit && !uzerineYazOnayi)}
                 className="h-9 rounded-md border border-tx-cizgi bg-white px-3 text-sm text-tx-gri hover:text-tx-metin disabled:opacity-50"
               >
                 {kayitliMi ? "Eşleştirmeyi düzelt" : "Eşleştirme"}
               </button>
-              <Button onClick={kaydetmeyeBasla} disabled={kayitliMi || kaydediliyor}>
+              {/*
+                Çakışan tarihte Kaydet KAPALI. Uyarı yetmedi: kullanıcı geçmiş
+                dönem dosyasını bugünün tarihiyle kaydedip güncel kesiti
+                sildi. Kaza olabilecek bir şey, bilinçli bir onay gerektirmeli.
+              */}
+              <Button onClick={kaydetmeyeBasla}
+                      disabled={kayitliMi || kaydediliyor || (!!cakisanKesit && !uzerineYazOnayi)}>
                 {kaydediliyor ? "Kaydediliyor..." : kayitliMi ? "Kaydedildi" : "Kaydet"}
               </Button>
               <button onClick={temizle} className="text-tx-gri hover:text-tx-metin" title="Vazgeç">
@@ -269,12 +278,22 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
         )}
 
         {kesit && cakisanKesit && !kayitliMi && (
-          <p className="mt-3 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2 text-[13px] text-tx-metin">
-            <b className="font-medium">{formatDate(cakisanKesit.tarih)}</b> tarihinde zaten kayıtlı bir
-            kesit var ({tr(cakisanKesit.kurumSayisi)} kurum). Kaydederseniz o kesit{" "}
-            <b className="font-medium">silinip</b> bunun yerine yazılır. Geçmiş dönem yüklüyorsanız
-            kesit tarihini o dönemin tarihine çevirin.
-          </p>
+          <div className="mt-3 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2.5 text-[13px] text-tx-metin">
+            <p>
+              <b className="font-medium">{formatDate(cakisanKesit.tarih)}</b> tarihinde zaten kayıtlı bir
+              kesit var ({tr(cakisanKesit.kurumSayisi)} kurum). Kaydederseniz o kesit{" "}
+              <b className="font-medium">silinir</b> ve yerine bu dosya yazılır — geri alınamaz.
+            </p>
+            <p className="mt-1 text-tx-gri">
+              Geçmiş dönem yüklüyorsanız istediğiniz bu değildir: kesit tarihini o dönemin tarihine çevirin.
+            </p>
+            <label className="mt-2 flex items-center gap-2 font-medium">
+              <input type="checkbox" checked={uzerineYazOnayi}
+                     onChange={(e) => setUzerineYazOnayi(e.target.checked)}
+                     className="h-3.5 w-3.5 accent-tx-kirmizi" />
+              {formatDate(cakisanKesit.tarih)} kesitinin silinmesini onaylıyorum
+            </label>
+          </div>
         )}
 
         {atlandiBilgisi !== null && kayitliMi && !kayitHatasi && (
