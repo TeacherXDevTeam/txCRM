@@ -9,11 +9,22 @@ const MILESTONES = [
 ];
 
 interface OnboardingProgressProps {
+  /** `onboarding_milestones` tablosundaki kayıtlar — elle işaretlenmiş adımlar */
   completedKeys: string[];
+  /**
+   * Verinin kendisinden ÇIKARILAN adımlar. Sözleşme varsa sözleşme
+   * imzalanmıştır, atama varsa eğitim paketi belirlenmiştir — bunu ayrıca
+   * elle işaretletmek gereksiz iş ve unutulduğunda pano yanlış görünüyor.
+   *
+   * Elle işaretlenmiş bir adım, kanıt sonradan kaybolsa bile işaretli kalır:
+   * insanın verdiği bilgi türetmeden güçlüdür.
+   */
+  otomatikKeys?: string[];
 }
 
-export function OnboardingProgress({ completedKeys }: OnboardingProgressProps) {
-  const completed = completedKeys.length;
+export function OnboardingProgress({ completedKeys, otomatikKeys = [] }: OnboardingProgressProps) {
+  const tamamlanan = new Set([...completedKeys, ...otomatikKeys]);
+  const completed = MILESTONES.filter((m) => tamamlanan.has(m.key)).length;
   const total = MILESTONES.length;
   const pct = Math.round((completed / total) * 100);
 
@@ -31,13 +42,21 @@ export function OnboardingProgress({ completedKeys }: OnboardingProgressProps) {
       </div>
       <ul className="space-y-2 mt-3">
         {MILESTONES.map((m) => {
-          const done = completedKeys.includes(m.key);
+          const done = tamamlanan.has(m.key);
+          // Elle işaretlenmemiş ama veriden çıkarılmış olanlar belirtilir ki
+          // tikin nereden geldiği belli olsun.
+          const otomatik = done && !completedKeys.includes(m.key);
           return (
             <li key={m.key} className="flex items-center gap-2.5 text-sm">
               {done
                 ? <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
                 : <Circle className="h-4 w-4 text-gray-300 shrink-0" />}
               <span className={done ? "text-gray-700" : "text-gray-400"}>{m.label}</span>
+              {otomatik && (
+                <span className="text-[11px] text-gray-400" title="Bu adım kayıtlardan çıkarıldı">
+                  otomatik
+                </span>
+              )}
             </li>
           );
         })}

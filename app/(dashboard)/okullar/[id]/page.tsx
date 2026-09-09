@@ -157,6 +157,21 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
 
   const completedMilestoneKeys = milestones.map((m) => m.milestone_key);
 
+  /*
+   * Onboarding adımlarının bir kısmı zaten veriden BELLİ. Sözleşme kaydı
+   * varsa sözleşme imzalanmıştır; koordinatör varsa girilmiştir; atama ya da
+   * paketli bir sözleşme varsa eğitim paketi belirlenmiştir. Bunları ayrıca
+   * elle işaretletmek gereksiz iş ve unutulduğunda pano gerçeği göstermiyor.
+   *
+   * "Açılış toplantısı" ve "CertifiX hesabı" çıkarılamaz: toplantı kaydının
+   * açılış toplantısı olduğunu bilemeyiz, CertifiX'in DB'de karşılığı yok.
+   * Onlar elle işaretlenmeye devam eder.
+   */
+  const otomatikMilestoneKeys: string[] = [];
+  if (contracts.length > 0) otomatikMilestoneKeys.push("sozlesme_imzalandi");
+  if (coords.length > 0) otomatikMilestoneKeys.push("koordinator_girildi");
+  if (assignments.length > 0) otomatikMilestoneKeys.push("egitim_paketi_belirlendi");
+
   const TYPE_LABELS: Record<string, string> = { devlet: "Devlet", ozel: "Özel", vakif: "Vakıf" };
 
   return (
@@ -365,7 +380,7 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
         <div>
           <section className="bg-white rounded-xl border p-5 sticky top-4">
             <h2 className="text-base font-semibold text-gray-900 mb-4">Onboarding</h2>
-            <OnboardingProgress completedKeys={completedMilestoneKeys} />
+            <OnboardingProgress completedKeys={completedMilestoneKeys} otomatikKeys={otomatikMilestoneKeys} />
           </section>
         </div>
       </div>
