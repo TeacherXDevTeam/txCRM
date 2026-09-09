@@ -7,6 +7,7 @@ import { OnboardingProgress } from "@/components/schools/onboarding-progress";
 import { SchoolDetailActions } from "@/components/schools/school-detail-actions";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import type { Database } from "@/types/database";
+import { OkulKesitPaneli, type OkulKesitNoktasi, type OkulKesitSubesi } from "@/components/schools/okul-kesit-paneli";
 
 type SchoolRow = Database["public"]["Tables"]["schools"]["Row"];
 type CoordRow = { id: string; is_primary: boolean; contact: { id: string; full_name: string; email: string | null; phone: string | null; title: string | null } };
@@ -94,6 +95,65 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
     id: m.id, title: m.title, meeting_date: m.meeting_date,
     attendees: (m.meeting_contacts ?? []).map((mc) => mc.contact?.full_name).filter(Boolean) as string[],
   }));
+
+  // Eğitim tamamlama kesitleri — bu okula bağlanmış report_kurum satırları.
+  // Tablolar henüz uygulanmamışsa (yeni ortam) sayfa çökmesin diye hata yutulur;
+  // panel de zaten veri yoksa hiç render edilmiyor.
+  let kesitNoktalari: OkulKesitNoktasi[] = [];
+  let kesitSubeleri: OkulKesitSubesi[] = [];
+
+  const { data: kesitKurumlari } = await supabase
+    .from("report_kurum")
+    .select("id, kurum_adi, ogretmen_sayisi, sube_sayisi, egitim_sayisi, ilerleme_ortalamasi, tamamlanma_orani, sertifika_sayisi, hic_baslamayan, tumunu_tamamlayan, kesit:report_kesit(kesit_tarihi)")
+    .eq("school_id", params.id);
+
+  if (kesitKurumlari && kesitKurumlari.length > 0) {
+    const satirlar = kesitKurumlari as unknown as {
+      id: string; kurum_adi: string; ogretmen_sayisi: number; sube_sayisi: number;
+      egitim_sayisi: number | null; ilerleme_ortalamasi: string; tamamlanma_orani: string;
+      sertifika_sayisi: number | null; hic_baslamayan: number; tumunu_tamamlayan: number;
+      kesit: { kesit_tarihi: string } | null;
+    }[];
+
+    kesitNoktalari = satirlar
+      .filter((r) => r.kesit !== null)
+      .map((r) => ({
+        tarih: r.kesit!.kesit_tarihi,
+        kurumAdi: r.kurum_adi,
+        ogretmenSayisi: r.ogretmen_sayisi,
+        subeSayisi: r.sube_sayisi,
+        egitimSayisi: r.egitim_sayisi,
+        ilerlemeOrtalamasi: Number(r.ilerleme_ortalamasi),
+        tamamlanmaOrani: Number(r.tamamlanma_orani),
+        sertifikaSayisi: r.sertifika_sayisi,
+        hicBaslamayan: r.hic_baslamayan,
+        tumunuTamamlayan: r.tumunu_tamamlayan,
+      }))
+      .sort((a, b) => a.tarih.localeCompare(b.tarih));
+
+    // Şubeler yalnızca EN SON kesitten — eskisiyle karışırsa toplam şişer.
+    const sonSatir = satirlar
+      .filter((r) => r.kesit !== null)
+      .sort((a, b) => a.kesit!.kesit_tarihi.localeCompare(b.kesit!.kesit_tarihi))
+      .at(-1);
+
+    if (sonSatir) {
+      const { data: subeRows } = await supabase
+        .from("report_sube")
+        .select("sube_adi, ogretmen_sayisi, ilerleme_ortalamasi")
+        .eq("kurum_id", sonSatir.id);
+
+      kesitSubeleri = ((subeRows ?? []) as unknown as {
+        sube_adi: string; ogretmen_sayisi: number; ilerleme_ortalamasi: string;
+      }[])
+        .map((r) => ({
+          subeAdi: r.sube_adi,
+          ogretmenSayisi: r.ogretmen_sayisi,
+          ilerlemeOrtalamasi: Number(r.ilerleme_ortalamasi),
+        }))
+        .sort((a, b) => b.ilerlemeOrtalamasi - a.ilerlemeOrtalamasi);
+    }
+  }
 
   const completedMilestoneKeys = milestones.map((m) => m.milestone_key);
 
@@ -183,6 +243,9 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
               </div>
             )}
           </section>
+
+          {/* Eğitim Tamamlama — kesit özeti */}
+          <OkulKesitPaneli okulAdi={school.name} noktalar={kesitNoktalari} subeler={kesitSubeleri} />
 
           {/* Assignments */}
           <section className="bg-white rounded-xl border p-5">
