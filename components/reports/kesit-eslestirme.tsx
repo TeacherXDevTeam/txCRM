@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, Check, CircleAlert, History, Plus, Save } from "lucide-react";
+import { ArrowLeft, Check, CircleAlert, History, Plus, Save, Search, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import type { KesitKurum } from "./kesit";
 import {
-  kararlariHazirla, sehirTahminEt,
+  kararlariHazirla, sehirTahminEt, eslesmeSupheliMi,
   type Karar, type KararDurumu, type OkulAdayi, type OncekiKarar,
 } from "./kurum-eslestir";
 import { tr } from "./brand";
@@ -103,6 +103,43 @@ export function KesitEslestirme({
       }));
   }, [kararlar, okullar]);
 
+  /** Bağlandığı okulla tek ortak kelimesi olmayan eşleştirmeler — insan baksın. */
+  const supheliler = useMemo(() => {
+    const set = new Set<string>();
+    for (const [kurum, k] of Object.entries(kararlar)) {
+      if (k.tip !== "okul") continue;
+      const okul = okullar.find((o) => o.id === k.schoolId);
+      if (okul && eslesmeSupheliMi(kurum, okul.name)) set.add(kurum);
+    }
+    return set;
+  }, [kararlar, okullar]);
+
+  const cakisanKurumlar = useMemo(
+    () => new Set(cakisanOkullar.flatMap((c) => c.kurumlar)), [cakisanOkullar]);
+
+  /** Bir satır kullanıcının bakması gereken satır mı? */
+  const sorunlu = (kurum: string) =>
+    cakisanKurumlar.has(kurum) || supheliler.has(kurum) || durumlar[kurum] !== "hatirlandi";
+
+  const sorunluSayisi = eslesmeler.filter((e) => sorunlu(e.raporKurum)).length;
+
+  const [arama, setArama] = useState("");
+  const [yalnizSorunlu, setYalnizSorunlu] = useState(false);
+
+  const gosterilecek = useMemo(() => {
+    const q = arama.trim().toLocaleLowerCase("tr");
+    return siraliEslesmeler.filter((e) => {
+      if (yalnizSorunlu && !sorunlu(e.raporKurum)) return false;
+      if (!q) return true;
+      const okul = kararlar[e.raporKurum]?.tip === "okul"
+        ? okullar.find((o) => o.id === (kararlar[e.raporKurum] as { schoolId: string }).schoolId)?.name ?? ""
+        : "";
+      return e.raporKurum.toLocaleLowerCase("tr").includes(q)
+          || okul.toLocaleLowerCase("tr").includes(q);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [siraliEslesmeler, arama, yalnizSorunlu, kararlar, okullar, cakisanKurumlar, supheliler, durumlar]);
+
   const yeniSayisi = Object.values(kararlar).filter((k) => k.tip === "yeni").length;
   const baglananSayisi = Object.values(kararlar).filter((k) => k.tip === "okul").length;
   const yokSayisi = Object.values(kararlar).filter((k) => k.tip === "yok").length;
@@ -196,6 +233,26 @@ export function KesitEslestirme({
         <p className="rounded border-l-[3px] border-tx-kirmizi bg-white px-4 py-3 text-[13px] text-tx-metin">{hata}</p>
       )}
 
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-tx-gri" />
+          <input
+            value={arama}
+            onChange={(e) => setArama(e.target.value)}
+            placeholder="Kurum veya okul adı ara…"
+            className="h-9 w-full rounded-md border border-tx-cizgi bg-white pl-8 pr-3 text-[13px]"
+          />
+        </div>
+        <label className="flex items-center gap-2 text-[12.5px] text-tx-gri">
+          <input type="checkbox" checked={yalnizSorunlu} onChange={(e) => setYalnizSorunlu(e.target.checked)}
+                 className="h-3.5 w-3.5 accent-tx-kirmizi" />
+          Yalnız dikkat isteyenler ({tr(sorunluSayisi)})
+        </label>
+        <span className="text-[12px] text-tx-gri">
+          {tr(gosterilecek.length)} / {tr(eslesmeler.length)} satır
+        </span>
+      </div>
+
       <div className="overflow-x-auto rounded bg-white">
         <table className="w-full border-collapse text-[13px]">
           <thead>
@@ -208,7 +265,7 @@ export function KesitEslestirme({
             </tr>
           </thead>
           <tbody>
-            {siraliEslesmeler.map((e) => {
+            {gosterilecek.map((e) => {
               const kurum = kurumlar.find((k) => k.kurumAdi === e.raporKurum);
               const karar = kararlar[e.raporKurum];
               return (
@@ -218,6 +275,12 @@ export function KesitEslestirme({
                     {tr(kurum?.ogretmenSayisi ?? 0)}
                   </td>
                   <td className="border-b border-tx-cizgi px-2.5 py-2.5">
+                    {(cakisanKurumlar.has(e.raporKurum) || supheliler.has(e.raporKurum)) && (
+                      <span className="mb-1 flex items-center gap-1 text-[12px] font-medium text-tx-kirmizi">
+                        <TriangleAlert className="h-3.5 w-3.5" />
+                        {cakisanKurumlar.has(e.raporKurum) ? "aynı okula 2 kurum" : "ad hiç benzemiyor"}
+                      </span>
+                    )}
                     {durumlar[e.raporKurum] === "hatirlandi" ? (
                       <span className="inline-flex items-center gap-1 text-[12px] text-tx-gri">
                         <History className="h-3.5 w-3.5" /> hatırlandı
@@ -283,6 +346,13 @@ export function KesitEslestirme({
             })}
           </tbody>
         </table>
+        {gosterilecek.length === 0 && (
+          <p className="px-3 py-6 text-center text-[13px] text-tx-gri">
+            {yalnizSorunlu && !arama.trim()
+              ? "Dikkat isteyen satır yok — eşleştirme temiz."
+              : "Aramaya uyan kurum yok."}
+          </p>
+        )}
       </div>
       <p className="text-[11.5px] text-tx-gri">
         Toplam {tr(eslesmeler.length)} kurum. Verdiğiniz kararlar kaydedilir; bir dahaki

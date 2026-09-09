@@ -242,3 +242,21 @@ export function kararlariHazirla(
 export function ilgiGerekenSayisi(durumlar: Record<string, KararDurumu>): number {
   return Object.values(durumlar).filter((d) => d !== "hatirlandi").length;
 }
+
+/**
+ * Bir eşleştirme şüpheli mi — rapordaki ad ile bağlandığı okulun adı arasında
+ * TEK BİR ortak ayırt edici kelime yoksa şüphelidir.
+ *
+ * "Amerikan Kültür Kolejleri Genel Merkezi" ↔ "ALKEV" böyle yakalanır:
+ * {amerikan, kultur, genel, merkezi} ∩ {alkev} = ∅
+ *
+ * Meşru istisnalar olabilir (kısaltma ile açık ad: "ODTÜ GVO" ↔ "Geliştirme
+ * Vakfı Okulları"), bu yüzden karar değil YALNIZCA İŞARET — kullanıcı bakar.
+ */
+export function eslesmeSupheliMi(raporKurum: string, okulAdi: string): boolean {
+  const a = anahtarKelimeler(raporKurum);
+  const b = anahtarKelimeler(okulAdi);
+  if (a.size === 0 || b.size === 0) return false;
+  for (const w of a) if (b.has(w)) return false;
+  return true;
+}
