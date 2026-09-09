@@ -85,9 +85,17 @@ export function ReportsTabs({ currentUserId, expectedByKurum, teacher, course }:
         )}
       </div>
 
-      {tab === "kesit" ? (
+      {/*
+        Kurum Takip her zaman MONTE KALIR, yalnızca gizlenir.
+        Koşullu render edilirse sekme değiştirildiğinde React bileşeni söküyor
+        ve yüklenen kesit kayboluyor — kesit henüz veritabanına yazılmadığı için
+        (Adım 3) tek kopyası bu bileşenin state'inde duruyor.
+      */}
+      <div className={tab === "kesit" ? "" : "hidden"}>
         <KesitPanosu />
-      ) : tab === "ogretmen" ? (
+      </div>
+
+      {tab === "kesit" ? null : tab === "ogretmen" ? (
         <>
           <TeacherReportUpload currentUserId={currentUserId} onYuklendi={setOturumSatirlari} />
           {teacher.kurumStats.length === 0 ? (
