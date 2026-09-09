@@ -4,10 +4,10 @@
 
 ## Şu Anki Durum
 
-**Faz:** Faz 1 tamamlandı (10 modül canlı) → **Faz 2 (Platform Foundation) uygulanmayı bekliyor**
-**Son güncelleme:** 2026-09-08
-**Deploy:** Vercel — çalışıyor
-**Sağlık:** `npm run type-check` ✅ · `npm run build` ✅ · `npm run lint` ✅ (0 hata, 36 uyarı)
+**Faz:** Faz 1 tamamlandı (10 modül canlı) · Faz 2 İş 1 ✅ · **Kurum Takip Panosu** devam ediyor (`PLAN_KURUM_TAKIP_PANOSU.md`, 9 adımın 7'si bitti)
+**Son güncelleme:** 2026-09-09
+**Deploy:** Vercel — çalışıyor (bir dönem push'ları almıyordu, düzeldi)
+**Sağlık:** `npm run type-check` ✅ · `npm run build` ✅ · `npm run lint` ✅ (0 hata, 35 uyarı — hepsi kapsam dışı eski modüllerde)
 
 ### 🔴 ÖNCE OKU
 - **Ortak canlı Supabase.** DDL anon/publishable anahtarla çalışmaz. Tüm şema değişiklikleri kullanıcıya **SQL bloğu** olarak verilir → Supabase **SQL Editor**'de çalıştırılır → aynı SQL `supabase/migrations/` altına tarih-önekli dosya olarak commit edilir.
@@ -15,6 +15,8 @@
 - **Sıradaki iş planı:** `PLAN_FOUNDATION_FAZ2.md` (5 iş) — başlamadan §0 "kritik bağlam"ı oku.
 - **Git akışı:** `main`'den feature branch → commit → push → PR. **PR'ları sen merge etme**, ekip inceler.
 - **PII:** `supabase/seed/` gerçek kurum/kişi verisi içerir, `.gitignore` kapsamındadır. Repoya girmemeli.
+- **Server Component sınırı:** `"use client"` işaretli bir modülün fonksiyonunu **sunucuda çağırma** — import serbesttir ama çağrı `is not a function` ile patlar ve `type-check`/`build` bunu yakalamaz. Saf yardımcılar ayrı dosyada tutulur (`kesit-map.ts`, `kesit-trend.ts`). Canlıda yaşandı (PR #18).
+- **Saat dilimi:** Tarih biçimlendirmede `timeZone` **daima** verilir (`TR_TZ`, `lib/utils.ts`). Vercel UTC, tarayıcı UTC+3 → hydration çöker. Canlıda yaşandı (PR #12).
 
 ## Tamamlanan İş
 
@@ -36,7 +38,7 @@
 | M7 Sözleşmeler | `/sozlesmeler` | sipariş kalemleri, bitiş uyarısı |
 | M8 Çalışma Grupları | `/calisma-gruplari` | split-layout: fazlar/üyeler/oturumlar |
 | M9 Ekip | `/ekip` | admin: rol + aktiflik yönetimi |
-| M10 Dashboard | `/dashboard`, `/raporlar` | metrik kartları; Excel yükleme (2 format: öğretmen özeti / kurs bazlı) + kurum bazlı rapor + PDF çıktısı |
+| M10 Dashboard | `/dashboard`, `/raporlar` | metrik kartları; Raporlar → **Kurum Takip** (Kurum Karşılaştırma · Şube · Eğitim · Aylık Takip + markalı kurum raporu/PDF) |
 
 ### Platform Foundation — Faz 1 ✅
 - `notifications` tablosu (polymorphic, RLS `recipient_id = auth.uid()`, Realtime) + header zili
@@ -48,17 +50,44 @@
 - Dosyalar: `supabase/seed/*.sql` (gitignored, SQL Editor'den yüklenir)
 - `20260827000000_trainings_default_trainer.sql` — `trainings.default_trainer_id` (seed'in DDL'i kayda geçirildi)
 
-### Raporlar — İki Format (2026-09-08) ✅
-- `/raporlar` iki sekme: **Öğretmen Özeti** (Adı Soyadı · Tamamlanan · Devam Eden · Tamamlama %) ve **Kurs Bazlı** (Kurs · İlerleme Yüzdesi · Sertifika Tarihi)
+### Raporlar — İki Format (2026-09-08) ✅ *(sonradan Kurum Takip'e devredildi)*
+- Platformdan iki döküm alınabiliyor: **kurs bazlı** (satır = öğretmen × eğitim) ve **öğretmen özeti** (satır = öğretmen). Format sütun başlıklarından otomatik anlaşılır.
 - Excel tarayıcıda işlenir; DB'ye yalnızca kurum bazlı sayısal özet gider (ham satır asla yazılmaz)
 - PDF çıktısı: `window.print()` + `@media print` (ek bağımlılık yok)
 - Migration `20260908000000_rapor_format_ayrimi.sql` — `report_uploads.format`
+- **Bu iki sekme 2026-09-09'da kaldırıldı**; Kurum Takip her iki formatı da okuyor.
 
 ### Raporlar — TeacherX Rapor Kimliği (2026-09-08) ✅
 - Görünüm `kurum_raporu.py` örnek çıktılarına hizalandı; marka paleti + Poppins/Inter
 - Grafikler saf SVG/CSS (`components/reports/brand.tsx`) — recharts kaldırıldı, sayfa 236 kB → 124 kB
 - **İki ayrı PDF:** Kurum Raporu (isimsiz, kayıtlı özetten) · Öğretmen Listesi (isimli, yalnız oturum belleğinden)
 - Gizlilik kuralı: `KULLANIM.md` — ikisi asla aynı çıktıya basılmaz
+
+### Faz 2 İş 1 — Tip yenileme + tipsiz client temizliği (2026-09-09) ✅
+- PR #11 çakışma yüzünden kapatıldı; güncel `main`'den temiz baştan yapıldı → **PR #16**
+- `types/database.ts`: `report_uploads.format`, `trainings.default_trainer_id` eklendi (CLI yetkisi yok, elle)
+- `notif-client.ts` paylaşılan typed client'a bağlandı; `okullar/page.tsx` ve `contract-form.tsx`'teki `as any` / `as never` / `as unknown as` kaldırıldı — kapsam dosyalarında **0 cast**
+
+### Kurum Takip Panosu (2026-09-09) — 9 adımın 7'si ✅
+Plan: `PLAN_KURUM_TAKIP_PANOSU.md`. Excel'deki 10 sayfalık takip panosunun CRM karşılığı.
+
+**Saklama ilkesi:** girdinin kendisi değil, **üretilen çıktı** saklanır. Ad, soyad, e-posta ve kişi bazlı ilerleme hiçbir kolonda yok — `HamSatir` tipinde bile ad alanı yok, yani gizlilik yorum değil **tip düzeyinde** garanti.
+
+| Adım | Ne | Durum |
+|---|---|---|
+| 1 | Hesaplama katmanı (`kesit.ts`) — iki formatı da okur | ✅ |
+| 2 | Şema — `20260909000000_kesit_tablolari.sql`, 5 tablo | ✅ canlıda |
+| 3 | Yükleme + kaydetme + kurum↔okul eşleştirme | ✅ PR #17 |
+| 4 | Kurum Karşılaştırma sekmesi + Kurum Dağılımı grafiği | ✅ |
+| 5 | Kurum Raporu (markalı, isimsiz, PDF) | ✅ |
+| 6 | Şube ve Eğitim Analizi sekmeleri | ✅ |
+| 7 | Aylık Takip — kesitler arası zaman serisi | ✅ PR #19 |
+| 8 | "TÜMÜ" toplaması (kurum seçicisinde) | ⬜ sıradaki |
+| 9 | Temizlik — `report_uploads` / `report_kurum_stats` DROP | ⬜ kod tarafı bitti, tablolar duruyor |
+
+**Hesap kuralları (bozma):** kurum ortalaması **öğretmen düzeyinden** hesaplanır (şube ortalamalarının ortalaması değil); kurumlar arası toplam **öğretmen sayısıyla ağırlıklı**; Aylık Takip'te varsayılan **sabit sepet** (sonradan eklenen kurum toplamı aşağı çeker); bilinmeyen değer `null` kalır, 0 yazılmaz.
+
+**Hotfix'ler:** PR #12 saat dilimi hydration · PR #18 Server Component sınırı · sekme değişiminde state kaybı · SVG `<title>` çok-çocuk hydration.
 
 ## Devam Eden
 
@@ -68,17 +97,22 @@ _Yok._
 
 | Konu | Detay | Nereye ait |
 |---|---|---|
-| `types/database.ts` eksik | `notifications`, `report_uploads`, `report_kurum_stats`, `contracts.expected_teacher_count`, yeni `lead_stage_enum` değerleri generated types'ta yok | Faz 2 İş 1 |
-| 36 `any`/`as never` cast | Yukarıdaki tip eksikliğinin sonucu. Lint'te `warn` olarak izleniyor | Faz 2 İş 1 |
+| 35 `any` cast | Eski modüllerde (egitmenler, toplantilar, egitimler, calisma-gruplari, ekip…). Faz 2 İş 1 kapsamı dışıydı, lint'te `warn` olarak izleniyor | Ayrı iş |
 | API route yok | Tüm mutation'lar tarayıcıdan doğrudan Supabase'e; güvenlik tamamen RLS'e bağlı | Değerlendirilecek |
-| `report_uploads.format` | `20260908000000_rapor_format_ayrimi.sql` SQL Editor'de çalıştırılmalı; uygulanana kadar Raporlar sayfası uyarı gösterir ve yükleme başarısız olur | Kullanıcı aksiyonu |
-| Service role key | `.env.local`'deki `SUPABASE_SERVICE_ROLE_KEY` aslında *publishable* anahtar → script tabanlı insert/DDL çalışmıyor | Kullanıcı aksiyonu |
+| Supabase CLI yetkisi | Giriş yapılan hesap `gttoevyxkpjhlxglsomd` projesine erişemiyor → `gen types` çalışmıyor, `types/database.ts` elle güncelleniyor | Kullanıcı aksiyonu |
+| Service role key | `.env.local`'deki `SUPABASE_SERVICE_ROLE_KEY` aslında *publishable* bir anahtar (`sb_publishab…`). Uygulama kodu kullanmıyor, ama seed betikleri çalışmaz ve **yerelden üretim verisi okunamaz** — sorgular hata değil, boş dizi döner | Kullanıcı aksiyonu |
+| Eski rapor tabloları | `report_uploads` / `report_kurum_stats` kodda artık kullanılmıyor ama DB'de duruyor. Adım 3 canlıda doğrulandı, `DROP TABLE` migration'ı yazılabilir | Kurum Takip Adım 9 |
 | Kurum verisi boşlukları | Onboarding checklist genişletme, ürün/abonelik modeli, şehir zenginleştirme | `PLAN_KURUM_VERISI.md` (onay bekliyor) |
 
 ## Sonraki Adımlar
 
-**`PLAN_FOUNDATION_FAZ2.md` sırasıyla:**
-1. **İş 1** — `types/database.ts` yenileme + tipsiz client temizliği *(sıradaki)*
+**Önce `PLAN_KURUM_TAKIP_PANOSU.md` bitirilecek:**
+1. **Okul detay sayfası** — `/okullar/[id]` üzerinde o kurumun kesit verisi *(sıradaki)*
+2. **Adım 8** — kurum seçicisine "TÜMÜ" (ağırlıklı toplam)
+3. **Adım 9** — `report_uploads` / `report_kurum_stats` DROP migration'ı
+
+**Sonra `PLAN_FOUNDATION_FAZ2.md`:**
+1. ~~**İş 1** — `types/database.ts` yenileme + tipsiz client temizliği~~ ✅ 2026-09-09 (PR #16)
 2. **İş 2** — Kazanılan lead → sözleşme köprüsü (trigger + fan-out bildirim)
 3. **İş 3+4** — Sözleşme bitiş & lead durgunluk hatırlatma cron'ları (pg_cron)
 4. **İş 5** — Dashboard
