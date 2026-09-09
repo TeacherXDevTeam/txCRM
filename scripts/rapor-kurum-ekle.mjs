@@ -71,6 +71,16 @@ const KUME_OLAMAZ = new Set([
   "akademi", "grubu", "grup", "vip", "genel", "merkez", "merkezi", "mtal",
 ]);
 
+/*
+ * Unicode birleştirme. Eski raporlarda bazı adlar NFD geliyor: "Ç" tek
+ * karakter değil C + birleşen çengel (0043 0327). Görüntüde aynı, string
+ * karşılaştırmasında farklı — "Anamur Çözüm Akademi" eşleşmeden geçiyordu.
+ * (09.09.2026 raporunda bu sorun yok, ölçüldü; eski dosyalarda var.)
+ */
+function nfc(s) {
+  return String(s ?? "").normalize("NFC").trim();
+}
+
 function katlaHam(s) {
   return s.replace(/[İIı]/g, "i").replace(/[Şş]/g, "s").replace(/[Çç]/g, "c")
     .replace(/[Öö]/g, "o").replace(/[Üü]/g, "u").replace(/[Ğğ]/g, "g").toLowerCase();
@@ -225,7 +235,7 @@ if (basliklar.includes(KURUM_BASLIGI)) {
 }
 
 // Şubeler — sırayı koruyarak tekilleştir
-const subeler = [...new Set(satirlar.map((r) => String(r[subeBasligi] ?? "").trim()).filter(Boolean))]
+const subeler = [...new Set(satirlar.map((r) => nfc(r[subeBasligi])).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, "tr"));
 
 console.log(`\n  Sayfa: ${sayfaAdi}   Satır: ${satirlar.length}   Şube sütunu: "${subeBasligi}"`);
@@ -257,7 +267,7 @@ if (!eslestirmeYolu) {
       subeKurum = new Map();
       kurumAdlari = new Set();
       for (const r of rs) {
-        const su = String(r[sb] ?? "").trim(), ku = String(r[kb] ?? "").trim();
+        const su = nfc(r[sb]), ku = nfc(r[kb]);
         if (ku) kurumAdlari.add(ku);
         if (su && ku && !subeKurum.has(su)) subeKurum.set(su, ku);
       }
@@ -336,7 +346,9 @@ try {
   cikis(`Eşleştirme dosyası okunamadı (geçerli JSON değil): ${e.message}`);
 }
 
-const eksik = subeler.filter((s) => !String(eslestirme[s] ?? "").trim());
+// Eşleştirme dosyası NFC yazılıyor; okurken de NFC ile aranır
+const eslestirmeNfc = Object.fromEntries(Object.entries(eslestirme).map(([k, v]) => [nfc(k), v]));
+const eksik = subeler.filter((s) => !String(eslestirmeNfc[s] ?? "").trim());
 if (eksik.length > 0) {
   console.error(`\n  ✗ ${eksik.length} şubenin kurumu boş. Doldurmadan devam edilmez —`);
   console.error(`    boş bırakılsa o satırlar sessizce kurumsuz kalırdı.\n`);
@@ -355,10 +367,10 @@ const yeniBasliklar = [
 ];
 
 const yeniSatirlar = satirlar.map((r) => {
-  const sube = String(r[subeBasligi] ?? "").trim();
+  const sube = nfc(r[subeBasligi]);
   const cikti = {};
   for (const b of yeniBasliklar) {
-    cikti[b] = b === KURUM_BASLIGI ? (eslestirme[sube] ?? "") : r[b];
+    cikti[b] = b === KURUM_BASLIGI ? (eslestirmeNfc[sube] ?? "") : r[b];
   }
   return cikti;
 });
