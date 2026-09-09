@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Konum artık profil tamamlama şartı değil (2026-09-10)
+Kullanıcının isteği: konum beklenmesin, beklenen öğretmen şart kalsın. Kural il VE ilçe istiyordu; rapordan gelen kurumların çoğunda ilçe anlamlı bir bilgi değil ve o rozet 101 okulda kalıcı olarak açık kalıyordu. Sürekli açık kalan bir uyarı bakılmayan bir uyarıdır ve asıl eksikleri de gizler. Konum bilgisi duruyor — listede ve okul detayında görünüyor — yalnızca "profil tamam mı" hesabına girmiyor. Süzgeç çipi de kalktı. Tarayıcıda kullanıcının gerçek sayılarıyla doğrulandı: çipler artık Koordinatör eksik (42) · Sözleşme eksik (17) · Beklenen öğretmen eksik (101). Toplam yine 101 görünüyor çünkü beklenen öğretmen HER okulda eksik ve kullanıcı o şartın kalmasını istedi; sayının düşmesi için o sütunun doldurulması gerekiyor.
+
 ### Son İşlem — Onboarding adımları veriden çıkarılıyor (2026-09-10)
 Kullanıcı bir okulda 20 atama olmasına rağmen "Eğitim Paketi Belirlendi" adımının tiksiz durduğunu bildirdi. Sebep: onboarding adımları YALNIZCA `onboarding_milestones` tablosundan okunuyordu ve o tabloya uygulamanın hiçbir yerinden yazılmıyor — yani pano gerçek veriye hiç bakmıyordu. Üç adım artık kanıttan çıkarılıyor: sözleşme kaydı varsa "Sözleşme İmzalandı", koordinatör varsa "Koordinatör Girildi", atama (ya da paketli sözleşme) varsa "Eğitim Paketi Belirlendi". Türetilen tikin yanında "otomatik" etiketi çıkıyor ki tikin nereden geldiği belli olsun. Elle işaretlenmiş bir adım, kanıt olmasa da işaretli kalıyor — insanın verdiği bilgi türetmeden güçlüdür. "Açılış Toplantısı" ve "CertifiX Hesabı" bilerek türetilmiyor: bir toplantı kaydının açılış toplantısı olduğunu bilemeyiz, CertifiX'in DB'de karşılığı yok. Dört senaryo tarayıcıda doğrulandı; kullanıcının durumu %40'tan %60'a çıkıyor.
 

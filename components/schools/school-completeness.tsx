@@ -16,7 +16,8 @@ interface Props {
   missingCounts: Record<string, number>; // etiket → kaç okulda eksik
 }
 
-const FIELDS = ["Konum", "Koordinatör", "Sözleşme", "Beklenen öğretmen"];
+/* Konum bilerek yok — bkz. okullar/page.tsx'teki gerekçe. */
+const FIELDS = ["Koordinatör", "Sözleşme", "Beklenen öğretmen"];
 
 export function SchoolCompleteness({ total, incomplete, missingCounts }: Props) {
   const [open, setOpen] = useState(false);
