@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Adım 3: kesit kaydetme + kurum eşleştirme (2026-09-09)
+Migration canlıda çalıştırıldı (5 tablo doğrulandı). `kesit-db.ts` yazma/okuma katmanı: aynı `kesit_tarihi` varsa önce silinip yeniden yazılıyor (cascade), kurum id'leri geri alınıp alt tablolar bağlanıyor. `kesit-eslestirme.tsx` ekranı: her kurum için *mevcut okula bağla / yeni okul olarak ekle / bağlama*; otomatik eşleşenler işaretli, çakışanlar onaya düşüyor, yeni okullarda şehir zorunlu (kurum+şube adından tahmin ediliyor). Sayfa artık kayıtlı kesiti DB'den okuyor — yenileme veriyi kaybetmiyor. Tablolar yoksa sessizce boş görünmek yerine ne yapılacağını söyleyen uyarı çıkıyor. Tiplerin gerçek şemayla eşleştiği PostgREST üzerinden doğrulandı (5 tablo, 60+ kolon). **Kaydetme işlemi giriş gerektirdiği için uçtan uca test edilemedi — kullanıcı denemeli.**
+
 ### Son İşlem — Faz 2 İş 1 yeniden (2026-09-09)
 Kapatılan PR #11 çakışma yüzünden kapatılmıştı; eski dalı diriltmek yerine güncel `main`'den temiz baştan yapıldı. Kapsam bu arada küçüldü: `report-client.ts` ve eski `raporlar/page.tsx` #15'te zaten silindi/yeniden yazıldı. Kalan gerçek iş — `types/database.ts`'e `report_uploads.format` ve `trainings.default_trainer_id`; `notif-client.ts` paylaşılan typed client'a bağlandı; `okullar/page.tsx`'teki tipsiz `sb` ve gereksiz cast'ler, `contract-form.tsx`'teki `as never`/`as any` kaldırıldı. Dokunulan dört dosyada sıfır cast, sıfır uyarı. Kalan 35 uyarı planın kapsam dışı bıraktığı eski modüllerde.
 

@@ -681,6 +681,141 @@ export interface Database {
           format?: "kurs" | "ogretmen";
         };
       };
+      report_kesit: {
+        Row: {
+          id: string;
+          kesit_tarihi: string;
+          dosya_adi: string | null;
+          kaynak_satir: number;
+          yukleyen: string | null;
+          created_at: string;
+        };
+        Insert: {
+          kesit_tarihi: string;
+          dosya_adi?: string | null;
+          kaynak_satir?: number;
+          yukleyen?: string | null;
+        };
+        Relationships: [];
+        Update: {
+          kesit_tarihi?: string;
+          dosya_adi?: string | null;
+          kaynak_satir?: number;
+        };
+      };
+      report_kurum: {
+        Row: {
+          id: string;
+          kesit_id: string;
+          kurum_adi: string;
+          school_id: string | null;
+          kaynak: "detayli" | "ozet";
+          ogretmen_sayisi: number;
+          sube_sayisi: number;
+          egitim_sayisi: number | null;
+          kayit_sayisi: number;
+          ilerleme_ortalamasi: number;
+          tamamlanma_orani: number;
+          tamamlanan_egitim: number;
+          sertifika_sayisi: number | null;
+          sertifika_alan: number | null;
+          hic_baslamayan: number;
+          devam_eden: number;
+          tumunu_tamamlayan: number;
+          esitsiz_atama: number;
+          created_at: string;
+        };
+        Insert: {
+          kesit_id: string;
+          kurum_adi: string;
+          school_id?: string | null;
+          kaynak?: "detayli" | "ozet";
+          ogretmen_sayisi?: number;
+          sube_sayisi?: number;
+          egitim_sayisi?: number | null;
+          kayit_sayisi?: number;
+          ilerleme_ortalamasi?: number;
+          tamamlanma_orani?: number;
+          tamamlanan_egitim?: number;
+          sertifika_sayisi?: number | null;
+          sertifika_alan?: number | null;
+          hic_baslamayan?: number;
+          devam_eden?: number;
+          tumunu_tamamlayan?: number;
+          esitsiz_atama?: number;
+        };
+        Relationships: [];
+        Update: {
+          school_id?: string | null;
+        };
+      };
+      report_sube: {
+        Row: {
+          id: string;
+          kurum_id: string;
+          sube_adi: string;
+          ogretmen_sayisi: number;
+          egitim_sayisi: number | null;
+          ilerleme_ortalamasi: number;
+          tamamlanma_orani: number;
+          sertifika_sayisi: number | null;
+          hic_baslamayan: number;
+          devam_eden: number;
+          tumunu_tamamlayan: number;
+        };
+        Insert: {
+          kurum_id: string;
+          sube_adi: string;
+          ogretmen_sayisi?: number;
+          egitim_sayisi?: number | null;
+          ilerleme_ortalamasi?: number;
+          tamamlanma_orani?: number;
+          sertifika_sayisi?: number | null;
+          hic_baslamayan?: number;
+          devam_eden?: number;
+          tumunu_tamamlayan?: number;
+        };
+        Relationships: [];
+        Update: { sube_adi?: string };
+      };
+      report_egitim: {
+        Row: {
+          id: string;
+          kurum_id: string;
+          egitim_adi: string;
+          atanan_ogretmen: number;
+          tamamlayan: number;
+          tamamlanma_orani: number;
+          hic_baslamayan: number;
+          sertifika_sayisi: number;
+        };
+        Insert: {
+          kurum_id: string;
+          egitim_adi: string;
+          atanan_ogretmen?: number;
+          tamamlayan?: number;
+          tamamlanma_orani?: number;
+          hic_baslamayan?: number;
+          sertifika_sayisi?: number;
+        };
+        Relationships: [];
+        Update: { egitim_adi?: string };
+      };
+      report_sertifika_ay: {
+        Row: {
+          id: string;
+          kurum_id: string;
+          ay: string;
+          adet: number;
+        };
+        Insert: {
+          kurum_id: string;
+          ay: string;
+          adet?: number;
+        };
+        Relationships: [];
+        Update: { adet?: number };
+      };
       report_kurum_stats: {
         Row: {
           id: string;

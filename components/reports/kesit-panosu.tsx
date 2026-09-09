@@ -16,6 +16,10 @@ import {
   DagilimGrafigi, Tablo, OranBari, Dipnot, tr,
 } from "./brand";
 import { formatDate } from "@/lib/utils";
+import { KesitEslestirme, type Karar } from "./kesit-eslestirme";
+import { kesitKaydet, okulOlustur, type KayitliKesit } from "./kesit-db";
+import type { OkulAdayi } from "./kurum-eslestir";
+import { useRouter } from "next/navigation";
 
 type Sayfa = "karsilastirma" | "sube" | "egitim";
 type Gorunum = { tip: Sayfa } | { tip: "kurum"; kurumAdi: string };
@@ -26,13 +30,29 @@ const SAYFALAR: { key: Sayfa; ad: string }[] = [
   { key: "egitim",        ad: "Eğitim Analizi" },
 ];
 
-export function KesitPanosu() {
-  const [kesit, setKesit] = useState<Kesit | null>(null);
-  const [dosyaAdi, setDosyaAdi] = useState("");
-  const [kesitTarihi, setKesitTarihi] = useState(() => new Date().toISOString().slice(0, 10));
-  const [kaynakSatir, setKaynakSatir] = useState(0);
+interface PanoProps {
+  kullaniciId: string;
+  okullar: OkulAdayi[];
+  kayitli: KayitliKesit | null;
+  /** Şema uygulanmamışsa sunucudan gelen hata */
+  semaHatasi: string | null;
+}
+
+export function KesitPanosu({ kullaniciId, okullar, kayitli, semaHatasi }: PanoProps) {
+  const router = useRouter();
+  // Kaydedilmiş kesit varsa onunla açılır; yükleme yapılınca üzerine yazılır.
+  const [kesit, setKesit] = useState<Kesit | null>(
+    kayitli ? { kurumlar: kayitli.kurumlar, uyarilar: { epostasizSatir: 0, birlestirilenMukerrer: 0, olcekDuzeltildi: false } } : null
+  );
+  const [kayitliMi, setKayitliMi] = useState(kayitli !== null);
+  const [dosyaAdi, setDosyaAdi] = useState(kayitli?.dosyaAdi ?? "");
+  const [kesitTarihi, setKesitTarihi] = useState(kayitli?.kesitTarihi ?? new Date().toISOString().slice(0, 10));
+  const [kaynakSatir, setKaynakSatir] = useState(kayitli?.kaynakSatir ?? 0);
   const [hata, setHata] = useState<string | null>(null);
   const [gorunum, setGorunum] = useState<Gorunum>({ tip: "karsilastirma" });
+  const [eslestirmede, setEslestirmede] = useState(false);
+  const [kaydediliyor, setKaydediliyor] = useState(false);
+  const [kayitHatasi, setKayitHatasi] = useState<string | null>(null);
 
   function dosyaSecildi(e: React.ChangeEvent<HTMLInputElement>) {
     setHata(null);
@@ -50,6 +70,7 @@ export function KesitPanosu() {
         k.uyarilar.epostasizSatir = sonuc.epostasiz;
         setKaynakSatir(sonuc.kaynakSatir);
         setKesit(k);
+        setKayitliMi(false);
         setGorunum({ tip: "karsilastirma" });
       } catch (err) {
         setKesit(null);
@@ -61,7 +82,34 @@ export function KesitPanosu() {
 
   function temizle() {
     setKesit(null); setDosyaAdi(""); setHata(null); setKaynakSatir(0);
-    setGorunum({ tip: "karsilastirma" });
+    setKayitliMi(false); setGorunum({ tip: "karsilastirma" });
+  }
+
+  async function kaydet(kararlar: Record<string, Karar>) {
+    if (!kesit) return;
+    setKaydediliyor(true); setKayitHatasi(null);
+    try {
+      // Önce yeni okullar açılır; id'leri bağlantı haritasına girer
+      const baglantilar: Record<string, string | null> = {};
+      for (const [kurumAdi, karar] of Object.entries(kararlar)) {
+        if (karar.tip === "okul") baglantilar[kurumAdi] = karar.schoolId;
+        else if (karar.tip === "yeni") baglantilar[kurumAdi] = await okulOlustur(kurumAdi, karar.sehir.trim());
+        else baglantilar[kurumAdi] = null;
+      }
+
+      await kesitKaydet({
+        kesit, kesitTarihi, dosyaAdi, kaynakSatir,
+        kullaniciId: kullaniciId, okulBaglantilari: baglantilar,
+      });
+
+      setEslestirmede(false);
+      setKayitliMi(true);
+      router.refresh();
+    } catch (e) {
+      setKayitHatasi(e instanceof Error ? e.message : "Kaydedilemedi.");
+    } finally {
+      setKaydediliyor(false);
+    }
   }
 
   const secili = kesit && gorunum.tip === "kurum"
@@ -70,6 +118,17 @@ export function KesitPanosu() {
 
   return (
     <div className="space-y-5">
+      {semaHatasi && (
+        <div className="ic-arac rounded border-l-[3px] border-tx-kirmizi bg-white px-4 py-3 text-[13px]">
+          <p className="font-semibold">Veritabanı tabloları bulunamadı</p>
+          <p className="mt-1 text-tx-gri">
+            Kesit tabloları henüz oluşturulmamış. <code className="rounded bg-tx-kagit px-1">supabase/migrations/20260909000000_kesit_tablolari.sql</code>
+            dosyasını Supabase SQL Editor&apos;de çalıştırın. O zamana kadar yükleme yapılabilir ama kaydedilemez.
+          </p>
+          <p className="mt-1 text-[11.5px] text-tx-gri">Sunucu mesajı: {semaHatasi}</p>
+        </div>
+      )}
+
       {/* --- yükleme --- */}
       <div className="ic-arac rounded-lg border border-tx-cizgi bg-white p-5">
         <div className="mb-3 flex items-center gap-2">
@@ -115,7 +174,9 @@ export function KesitPanosu() {
                   className="h-9 rounded-md border border-tx-cizgi bg-white px-3 text-sm"
                 />
               </div>
-              <Button disabled title="Kaydetme Adım 2'de (şema) gelecek">Kaydet</Button>
+              <Button onClick={() => { setKayitHatasi(null); setEslestirmede(true); }} disabled={kayitliMi}>
+                {kayitliMi ? "Kaydedildi" : "Kaydet"}
+              </Button>
               <button onClick={temizle} className="text-tx-gri hover:text-tx-metin" title="Vazgeç">
                 <X className="h-5 w-5" />
               </button>
@@ -145,7 +206,16 @@ export function KesitPanosu() {
         )}
       </div>
 
-      {!kesit ? null : secili ? (
+      {kesit && eslestirmede ? (
+        <KesitEslestirme
+          kurumlar={kesit.kurumlar}
+          okullar={okullar}
+          kaydediliyor={kaydediliyor}
+          hata={kayitHatasi}
+          onGeri={() => setEslestirmede(false)}
+          onKaydet={kaydet}
+        />
+      ) : !kesit ? null : secili ? (
         <KurumDetay
           kurum={secili}
           tarih={formatDate(kesitTarihi)}
