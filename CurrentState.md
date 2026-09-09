@@ -1,6 +1,9 @@
 # TeacherX CRM — Mevcut Durum
 
-> Her işlem sonunda güncellenir. Son güncelleme: 2026-09-08
+> Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
+
+### Son İşlem — Kurum Takip Adım 2: kesit tabloları (2026-09-09)
+`20260909000000_kesit_tablolari.sql` hazırlandı — 5 tablo (`report_kesit`, `report_kurum`, `report_sube`, `report_egitim`, `report_sertifika_ay`) + indeksler + RLS (admin/operasyon). **SQL Editor'de çalıştırılmayı bekliyor.** Kurum↔okul bağlantısı `report_kurum.school_id` üzerinden: rapordaki kurum adı her zaman saklanır, ada göre eşleşen okula bağlanır, eşleşmeyen kayıt engellenmez (school_id NULL kalır, eşleştirme ekranına düşer). Yükleme tek yerden (Raporlar → Kurum Takip); Okullar sayfasından tek tek yükleme yok. Ayrıca dev ortamı sorunu çözüldü: `npm run build` sonrası kalan prodüksiyon `.next`'i üzerine `next dev` gelince CSS 500 dönüyordu — `.next` silinip temiz başlatıldı.
 
 ### Son İşlem — Kurum Takip: Şube ve Eğitim Analizi (2026-09-08)
 Planın Adım 6'sı yapıldı. Kurum Takip sekmesine iç sayfa çubuğu eklendi: **Kurum Karşılaştırma · Şube Analizi · Eğitim Analizi**; kurum adına tıklayınca o kurumun markalı raporu açılıyor. Şube Analizi tüm kurumların şubelerini tek tabloda gösteriyor (kurum filtresi, sıralanabilir, "Hiç Başlamayan %" ters renk skalası). Eğitim Analizi eğitimleri kurumlar arası topluyor, en düşük tamamlanma üstte. Özet dökümde eğitim adı olmadığı için Eğitim Analizi açıklayıcı bir boş durum gösteriyor — detaylı döküm isteniyor. Sentetik veriyle iki formatta da doğrulandı.
