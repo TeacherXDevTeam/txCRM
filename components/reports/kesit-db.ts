@@ -136,14 +136,36 @@ export async function kesitKaydet(g: KaydetGirdisi): Promise<KaydetSonucu> {
   };
 }
 
-/** Eşleştirme ekranından yeni okul oluşturur, id'sini döner. */
+/**
+ * Eşleştirme ekranından yeni okul oluşturur, id'sini döner.
+ *
+ * IDEMPOTENT: aynı adda okul varsa yenisini açmaz, mevcudun id'sini döner.
+ * Sebebi: okullar tek tek ve transaction'sız yaratılıyor (Supabase JS çok
+ * tablolu işlemi tek transaction'da yapamaz). 31 kurumun 17.'sinde hata
+ * olursa ilk 16 okul veritabanında kalır; kullanıcı tekrar denediğinde ad
+ * kontrolü olmasaydı o 16 okul MÜKERRER açılırdı.
+ *
+ * `schools.city` NOT NULL ama boş string'e izin verir; rapor şehir bilgisi
+ * içermediği için boş geçilebilir, kullanıcı sonra doldurur.
+ */
 export async function okulOlustur(ad: string, sehir: string): Promise<string> {
   const sb = createClient();
+  const temizAd = ad.trim();
+
+  // ilike joker içermiyor → büyük/küçük harf duyarsız TAM eşleşme
+  const { data: mevcut } = await sb
+    .from("schools")
+    .select("id")
+    .ilike("name", temizAd)
+    .limit(1);
+
+  if (mevcut && mevcut.length > 0) return mevcut[0].id;
+
   const { data, error } = await sb
     .from("schools")
-    .insert({ name: ad, city: sehir, status: "aktif" })
+    .insert({ name: temizAd, city: sehir, status: "aktif" })
     .select("id")
     .single();
-  if (error || !data) throw new Error(`Okul oluşturulamadı: ${error?.message ?? "bilinmeyen hata"}`);
+  if (error || !data) throw new Error(`"${temizAd}" okulu oluşturulamadı: ${error?.message ?? "bilinmeyen hata"}`);
   return data.id;
 }

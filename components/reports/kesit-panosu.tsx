@@ -64,8 +64,13 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
   const [eslestirmede, setEslestirmede] = useState(false);
   const [kaydediliyor, setKaydediliyor] = useState(false);
   const [kayitHatasi, setKayitHatasi] = useState<string | null>(null);
-  /** Eşleştirme ekranı atlandıysa kaç kurumun kararı hatırlandı — kullanıcıya bildirilir */
-  const [atlandiBilgisi, setAtlandiBilgisi] = useState<number | null>(null);
+  /**
+   * Eşleştirme ekranı atlandıysa neyin hatırlandığı — yalnız "kaç kurum" demek
+   * yetmiyor: bağlanmamış kurumların verisi Okullar tarafında görünmez ve
+   * kullanıcı bunu ekran atlandığı için hiç fark etmeyebilir.
+   */
+  const [atlandiBilgisi, setAtlandiBilgisi] =
+    useState<{ toplam: number; bagli: number; baglanmamis: number } | null>(null);
 
   function dosyaSecildi(e: React.ChangeEvent<HTMLInputElement>) {
     setHata(null);
@@ -139,7 +144,12 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
       kesit.kurumlar.map((k) => k.kurumAdi), okullar, subeAdlari, oncekiKararlar);
 
     if (ilgiGerekenSayisi(hazir.durumlar) === 0) {
-      setAtlandiBilgisi(Object.keys(hazir.kararlar).length);
+      const kararListesi = Object.values(hazir.kararlar);
+      setAtlandiBilgisi({
+        toplam: kararListesi.length,
+        bagli: kararListesi.filter((k) => k.tip === "okul").length,
+        baglanmamis: kararListesi.filter((k) => k.tip !== "okul").length,
+      });
       void kaydet(hazir.kararlar);
     } else {
       setAtlandiBilgisi(null);
@@ -233,10 +243,19 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
         )}
 
         {atlandiBilgisi !== null && kayitliMi && !kayitHatasi && (
-          <p className="mt-3 rounded-md border-l-[3px] border-tx-cizgi bg-white px-3 py-2 text-[13px] text-tx-gri">
-            <b className="font-medium text-tx-metin">{tr(atlandiBilgisi)}</b> kurumun tamamı önceki
-            kesitlerden hatırlandığı için eşleştirme sorulmadı. Değiştirmek için
-            &quot;Eşleştirme&quot; düğmesini kullanın.
+          <p className={`mt-3 rounded-md border-l-[3px] bg-white px-3 py-2 text-[13px] text-tx-gri ${
+            atlandiBilgisi.baglanmamis > 0 ? "border-tx-kirmizi" : "border-tx-cizgi"}`}>
+            <b className="font-medium text-tx-metin">{tr(atlandiBilgisi.toplam)}</b> kurumun tamamı
+            önceki kesitlerden hatırlandığı için eşleştirme sorulmadı:{" "}
+            <b className="font-medium text-tx-metin">{tr(atlandiBilgisi.bagli)}</b> kurum okula bağlı
+            {atlandiBilgisi.baglanmamis > 0 && (
+              <>
+                , <b className="font-medium text-tx-kirmizi">{tr(atlandiBilgisi.baglanmamis)}</b> kurum
+                <b className="font-medium text-tx-metin"> hiçbir okula bağlı değil</b> — bu kurumların
+                verisi Okullar sayfasında görünmez. &quot;Eşleştirme&quot; düğmesinden hepsini tek
+                tuşla yeni okul olarak ekleyebilirsiniz
+              </>
+            )}.
           </p>
         )}
 

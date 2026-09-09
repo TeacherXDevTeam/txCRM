@@ -53,6 +53,30 @@ export function KesitEslestirme({
 
   const ayarla = (kurum: string, karar: Karar) => setKararlar((p) => ({ ...p, [kurum]: karar }));
 
+  /**
+   * "Bağlanmayacak" durumdaki kurumların hepsini tek seferde yeni okula çevirir.
+   * 92 kurumluk listede 30 satırı elle değiştirmek pratik değil; bu yüzden var.
+   */
+  function bagliOlmayanlariYeniYap() {
+    setKararlar((p) => {
+      const y = { ...p };
+      for (const e of eslesmeler) {
+        if (y[e.raporKurum]?.tip === "yok") {
+          y[e.raporKurum] = {
+            tip: "yeni",
+            sehir: sehirTahminEt(e.raporKurum, subeAdlari.get(e.raporKurum) ?? []) ?? "",
+          };
+        }
+      }
+      return y;
+    });
+  }
+
+  // Şehri boş kalan yeni okullar. ENGEL DEĞİL, yalnızca bilgi:
+  // `schools.city` NOT NULL ama boş string'e izin veriyor ve sistemdeki
+  // okulların şehri zaten dolu değil ("Belirtilmedi"). Şehri zorunlu tutmak
+  // kullanıcıyı 30+ kurum için elle şehir yazmaya ya da hepsini "Bağlama"
+  // seçmeye zorluyordu — ikincisi olduğu için hiçbir okul açılmadı.
   const sehirsizYeni = eslesmeler.filter((e) => {
     const k = kararlar[e.raporKurum];
     return k?.tip === "yeni" && !k.sehir.trim();
@@ -77,7 +101,7 @@ export function KesitEslestirme({
             Verdiğiniz karar kaydedilir; aynı kurum sonraki kesitlerde tekrar sorulmaz.
           </p>
         </div>
-        <Button onClick={() => onKaydet(kararlar)} disabled={kaydediliyor || sehirsizYeni.length > 0}>
+        <Button onClick={() => onKaydet(kararlar)} disabled={kaydediliyor}>
           <Save className="mr-1.5 h-4 w-4" />
           {kaydediliyor ? "Kaydediliyor..." : "Onayla ve Kaydet"}
         </Button>
@@ -107,11 +131,24 @@ export function KesitEslestirme({
         <Kutu etiket="Bağlanmayacak" deger={yokSayisi} renk="text-tx-gri" />
       </div>
 
+      {yokSayisi > 0 && (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border-l-[3px] border-tx-cizgi bg-white px-4 py-3 text-[13px] text-tx-gri">
+          <span>
+            <b className="font-medium text-tx-metin">{tr(yokSayisi)}</b> kurum hiçbir okula
+            bağlanmayacak — bu kurumların verisi Okullar tarafında görünmez.
+          </span>
+          <button onClick={bagliOlmayanlariYeniYap}
+                  className="rounded-md border border-tx-cizgi bg-white px-2.5 py-1 text-[12.5px] font-medium text-tx-metin hover:border-tx-kirmizi">
+            Hepsini yeni okul olarak ekle
+          </button>
+        </p>
+      )}
+
       {sehirsizYeni.length > 0 && (
-        <p className="rounded border-l-[3px] border-tx-kirmizi bg-white px-4 py-3 text-[13px]">
-          <b>{sehirsizYeni.length}</b> yeni okulun şehri boş. Şehir zorunlu bir alan; rapor bu bilgiyi
-          içermediği için kurum ve şube adından tahmin edilmeye çalışıldı. Boş kalanları doldurun ya da
-          &quot;Bağlama&quot; seçin.
+        <p className="rounded border-l-[3px] border-tx-cizgi bg-white px-4 py-3 text-[13px] text-tx-gri">
+          <b className="font-medium text-tx-metin">{tr(sehirsizYeni.length)}</b> yeni okulun şehri boş.
+          Rapor bu bilgiyi içermiyor; kurum ve şube adından tahmin edilmeye çalışıldı.
+          Boş bırakabilirsiniz — okul yine açılır, şehri sonra Okullar sayfasından doldurursunuz.
         </p>
       )}
       {hata && (
@@ -194,10 +231,8 @@ export function KesitEslestirme({
                         <input
                           value={karar.sehir}
                           onChange={(ev) => ayarla(e.raporKurum, { tip: "yeni", sehir: ev.target.value })}
-                          placeholder="zorunlu"
-                          className={`h-8 w-44 rounded-md border bg-white px-2 text-[13px] ${
-                            karar.sehir.trim() ? "border-tx-cizgi" : "border-tx-kirmizi"
-                          }`}
+                          placeholder="isteğe bağlı"
+                          className="h-8 w-44 rounded-md border border-tx-cizgi bg-white px-2 text-[13px]"
                         />
                       </div>
                     )}
