@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { KesitPanosu } from "@/components/reports/kesit-panosu";
+import { satirlariKesiteCevir, type KayitliKesit } from "@/components/reports/kesit-db";
+import type { OkulAdayi } from "@/components/reports/kurum-eslestir";
 
 export const metadata = { title: "Raporlar — TeacherX CRM" };
 export const dynamic = "force-dynamic";
@@ -21,6 +23,46 @@ export default async function RaporlarPage() {
     );
   }
 
+  // Eşleştirme için okul listesi
+  const { data: okulRows } = await supabase.from("schools").select("id, name").order("name");
+  const okullar: OkulAdayi[] = okulRows ?? [];
+
+  // En son kaydedilmiş kesit. Tablolar yoksa sessizce boş görünmek yerine
+  // kullanıcıya ne yapması gerektiğini söyleriz.
+  let kayitli: KayitliKesit | null = null;
+  let semaHatasi: string | null = null;
+
+  const { data: kesitRows, error: kesitHata } = await supabase
+    .from("report_kesit")
+    .select("id, kesit_tarihi, dosya_adi, kaynak_satir")
+    .order("kesit_tarihi", { ascending: false })
+    .limit(1);
+
+  if (kesitHata) {
+    semaHatasi = kesitHata.message;
+  } else if (kesitRows && kesitRows.length > 0) {
+    const k = kesitRows[0];
+    const { data: kurumlar } = await supabase
+      .from("report_kurum").select("*").eq("kesit_id", k.id).order("kurum_adi");
+    const kurumIdListesi = (kurumlar ?? []).map((r) => r.id);
+
+    const [{ data: subeler }, { data: egitimler }, { data: sertAylar }] = await Promise.all([
+      supabase.from("report_sube").select("*").in("kurum_id", kurumIdListesi),
+      supabase.from("report_egitim").select("*").in("kurum_id", kurumIdListesi),
+      supabase.from("report_sertifika_ay").select("*").in("kurum_id", kurumIdListesi),
+    ]);
+
+    kayitli = {
+      id: k.id,
+      kesitTarihi: k.kesit_tarihi,
+      dosyaAdi: k.dosya_adi,
+      kaynakSatir: k.kaynak_satir,
+      kurumlar: satirlariKesiteCevir(kurumlar ?? [], subeler ?? [], egitimler ?? [], sertAylar ?? []),
+      kurumIdleri: Object.fromEntries((kurumlar ?? []).map((r) => [r.kurum_adi, r.id])),
+      okulBaglantilari: Object.fromEntries((kurumlar ?? []).map((r) => [r.kurum_adi, r.school_id])),
+    };
+  }
+
   return (
     <div className="space-y-6">
       <div className="ic-arac">
@@ -36,7 +78,12 @@ export default async function RaporlarPage() {
         </p>
       </div>
 
-      <KesitPanosu />
+      <KesitPanosu
+        kullaniciId={user?.id ?? ""}
+        okullar={okullar}
+        kayitli={kayitli}
+        semaHatasi={semaHatasi}
+      />
     </div>
   );
 }
