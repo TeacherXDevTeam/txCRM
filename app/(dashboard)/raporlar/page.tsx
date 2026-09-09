@@ -2,9 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { KesitPanosu } from "@/components/reports/kesit-panosu";
 import { satirlariKesiteCevir, type KayitliKesit } from "@/components/reports/kesit-map";
 import type { OkulAdayi } from "@/components/reports/kurum-eslestir";
+import { trendKur, type Trend } from "@/components/reports/kesit-trend";
+import type { Database } from "@/types/database";
 
 export const metadata = { title: "Raporlar — TeacherX CRM" };
 export const dynamic = "force-dynamic";
+
+/** Aylık Takip'te gösterilen en fazla kesit — ayda bir yüklemede 3 yıl. */
+const TREND_KESIT_SINIRI = 36;
 
 export default async function RaporlarPage() {
   const supabase = createClient();
@@ -63,6 +68,41 @@ export default async function RaporlarPage() {
     };
   }
 
+  // Aylık Takip — tüm kesitlerin kurum satırları.
+  // Satır sayısı kesit × kurum ile büyür (12 kesit × 92 kurum ≈ 1100) ve
+  // PostgREST tek istekte 1000 satırda kesiyor; bu yüzden sayfalanır.
+  let trend: Trend | null = null;
+
+  if (!semaHatasi) {
+    const { data: tumKesitler } = await supabase
+      .from("report_kesit")
+      .select("id, kesit_tarihi")
+      .order("kesit_tarihi", { ascending: false })
+      .limit(TREND_KESIT_SINIRI);
+
+    if (tumKesitler && tumKesitler.length > 0) {
+      const idler = tumKesitler.map((k) => k.id);
+      const satirlar: Database["public"]["Tables"]["report_kurum"]["Row"][] = [];
+      const SAYFA = 1000;
+
+      for (let bas = 0; ; bas += SAYFA) {
+        const { data: sayfa, error } = await supabase
+          .from("report_kurum")
+          .select("*")
+          .in("kesit_id", idler)
+          .order("kesit_id")
+          .order("kurum_adi")
+          .range(bas, bas + SAYFA - 1);
+
+        if (error || !sayfa) break;
+        satirlar.push(...sayfa);
+        if (sayfa.length < SAYFA) break;
+      }
+
+      trend = trendKur(tumKesitler, satirlar);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="ic-arac">
@@ -82,6 +122,7 @@ export default async function RaporlarPage() {
         kullaniciId={user?.id ?? ""}
         okullar={okullar}
         kayitli={kayitli}
+        trend={trend}
         semaHatasi={semaHatasi}
       />
     </div>
