@@ -6,7 +6,7 @@ import { Select } from "@/components/ui/select";
 import { tr, tr1 } from "./brand";
 import { formatDate } from "@/lib/utils";
 import {
-  METRIKLER, kisaAy, metrikDegeri,
+  METRIKLER, kisaAy, metrikDegeri, zamanKonumlari, egitimYili, egitimYiliSinirlari, gunNumarasi,
   type MetrikAnahtar, type Trend, type TrendHucre,
 } from "./kesit-trend";
 
@@ -46,19 +46,58 @@ const G = { g: 900, y: 300, sol: 52, sag: 14, ust: 16, alt: 34 };
 interface Seri { ad: string; renk: string; kalinlik: number; noktalar: (number | null)[] }
 
 function CizgiGrafik({
-  seriler, etiketler, yuzde,
-}: { seriler: Seri[]; etiketler: string[]; yuzde: boolean }) {
+  seriler, tarihler, yuzde,
+}: { seriler: Seri[]; tarihler: string[]; yuzde: boolean }) {
+  const etiketler = tarihler.map(kisaAy);
   const tumDegerler = seriler.flatMap((s) => s.noktalar).filter((d): d is number => d !== null);
   const enBuyuk = tumDegerler.length ? Math.max(...tumDegerler) : 1;
   const tavan = yuzde ? 100 : Math.max(1, Math.ceil((enBuyuk * 1.1) / 5) * 5);
 
   const cizim = G.g - G.sol - G.sag;
   const boy = G.y - G.ust - G.alt;
-  // Tek kesitte bölme sıfıra düşmesin diye nokta ortalanır.
-  const x = (i: number) => etiketler.length === 1
-    ? G.sol + cizim / 2
-    : G.sol + (i / (etiketler.length - 1)) * cizim;
+
+  /*
+   * Nokta konumları TARİHE göre; sıraya göre değil. Geçen yılın kapanış
+   * dosyası ile bu ayın kesiti arasında 15 ay, iki aylık kesit arasında
+   * 1 ay olabiliyor — eşit aralıklı çizmek eğimi yanıltıcı yapardı.
+   */
+  const konumlar = zamanKonumlari(tarihler);
+  const x = (i: number) => G.sol + konumlar[i] * cizim;
   const yy = (d: number) => G.ust + boy - (d / tavan) * boy;
+
+  /*
+   * Eğitim öğretim yılı sınırları (1 Ağustos). Yıl takvim yılı değil;
+   * sözleşme dönemi de buna göre işliyor, bu yüzden "geçen yıl" karşılaştırması
+   * ancak ayraçlar görünürse okunur olur.
+   */
+  const gunler = tarihler.map(gunNumarasi);
+  const enAzGun = Math.min(...gunler), enCokGun = Math.max(...gunler);
+  const gunAraligi = enCokGun - enAzGun;
+  const sinirX = (t: string) =>
+    gunAraligi === 0 ? G.sol + cizim / 2
+      : G.sol + ((gunNumarasi(t) - enAzGun) / gunAraligi) * cizim;
+  const yilSinirlari = egitimYiliSinirlari(tarihler);
+
+  /*
+   * Noktalar zaman ekseninde kümelenebilir (12 aylık kesit + 1 yıl öncesi).
+   * Üst üste binen etiket okunmaz; ilk ve son daima yazılır, aradakiler
+   * yalnız yeterli boşluk varsa.
+   */
+  const etiketliler = new Set<number>();
+  let sonX = -Infinity;
+  const ETIKET_ARALIGI = 46;
+  tarihler.forEach((_, i) => {
+    const son = i === tarihler.length - 1;
+    if (i === 0 || son || x(i) - sonX >= ETIKET_ARALIGI) {
+      // Son etiket sondan öncekini eziyorsa öncekini düşür
+      if (son && x(i) - sonX < ETIKET_ARALIGI) {
+        const oncekiler = [...etiketliler];
+        etiketliler.delete(oncekiler[oncekiler.length - 1]);
+      }
+      etiketliler.add(i);
+      sonX = x(i);
+    }
+  });
 
   const yEksen = [0, 0.25, 0.5, 0.75, 1].map((o) => o * tavan);
 
@@ -66,6 +105,16 @@ function CizgiGrafik({
     <div className="overflow-x-auto rounded bg-white px-2 py-4">
       <svg viewBox={`0 0 ${G.g} ${G.y}`} className="min-w-[560px] w-full" role="img"
            aria-label="Kesitler arası değişim grafiği">
+        {yilSinirlari.map((y) => (
+          <g key={y.tarih}>
+            <line x1={sinirX(y.tarih)} x2={sinirX(y.tarih)} y1={G.ust} y2={G.ust + boy}
+                  stroke="#C9C6C0" strokeWidth="1" strokeDasharray="3 3" />
+            <text x={sinirX(y.tarih) + 4} y={G.ust + 10} fontSize="10" fill="#6B6B6B">
+              {y.etiket}
+            </text>
+          </g>
+        ))}
+
         {yEksen.map((d) => (
           <g key={d}>
             <line x1={G.sol} x2={G.g - G.sag} y1={yy(d)} y2={yy(d)}
@@ -76,10 +125,14 @@ function CizgiGrafik({
           </g>
         ))}
 
-        {etiketler.map((e, i) => (
+        {etiketler.map((e, i) => etiketliler.has(i) ? (
           <text key={`${e}-${i}`} x={x(i)} y={G.y - 12} textAnchor="middle" fontSize="11" fill="#6B6B6B">
             {e}
           </text>
+        ) : (
+          // Etiketi sığmayan noktanın yerini küçük bir çentik gösterir
+          <line key={`${e}-${i}`} x1={x(i)} x2={x(i)} y1={G.y - G.alt + 2} y2={G.y - G.alt + 6}
+                stroke="#C9C6C0" strokeWidth="1" />
         ))}
 
         {seriler.map((s) => {
@@ -101,7 +154,7 @@ function CizgiGrafik({
               ))}
               {s.noktalar.map((d, i) => d === null ? null : (
                 <circle key={i} cx={x(i)} cy={yy(d)} r={s.kalinlik + 1.5} fill={s.renk}>
-                  <title>{`${s.ad}\n${etiketler[i]}\n${bicim(d, yuzde)}`}</title>
+                  <title>{`${s.ad}\n${etiketler[i]} · ${egitimYili(tarihler[i])}\n${bicim(d, yuzde)}`}</title>
                 </circle>
               ))}
             </g>
@@ -130,7 +183,6 @@ export function KesitAylikTakip({ trend }: { trend: Trend }) {
 
   const metrik = METRIKLER.find((m) => m.anahtar === metrikAnahtar)!;
   const { kesitler, kurumlar } = trend;
-  const etiketler = kesitler.map((k) => kisaAy(k.tarih));
 
   const sepetDegisiyor = trend.sabitKurumSayisi !== kurumlar.length;
   const toplamHucreler: (TrendHucre | null)[] = sabitSepet ? trend.toplamSabit : trend.toplam;
@@ -176,6 +228,10 @@ export function KesitAylikTakip({ trend }: { trend: Trend }) {
           <h2 className="font-baslik text-lg font-semibold text-tx-metin">Aylık Takip</h2>
           <p className="text-[12.5px] text-tx-gri">
             {tr(kesitler.length)} kesit · {formatDate(kesitler[0].tarih)} → {formatDate(kesitler[kesitler.length - 1].tarih)}
+            {" · "}
+            {egitimYili(kesitler[0].tarih) === egitimYili(kesitler[kesitler.length - 1].tarih)
+              ? `${egitimYili(kesitler[0].tarih)} eğitim yılı`
+              : `${egitimYili(kesitler[0].tarih)} → ${egitimYili(kesitler[kesitler.length - 1].tarih)} eğitim yılları`}
             {" · "}Bir kuruma tıklayarak grafiğe ekleyin
           </p>
         </div>
@@ -195,7 +251,7 @@ export function KesitAylikTakip({ trend }: { trend: Trend }) {
         </div>
       </div>
 
-      <CizgiGrafik seriler={seriler} etiketler={etiketler} yuzde={metrik.yuzde} />
+      <CizgiGrafik seriler={seriler} tarihler={kesitler.map((k) => k.tarih)} yuzde={metrik.yuzde} />
 
       <p className="px-1 text-[12px] leading-relaxed text-tx-gri">
         {metrik.aciklama}. Toplam satırı öğretmen sayısıyla <b className="font-medium text-tx-metin">ağırlıklı</b> hesaplanır —
@@ -215,6 +271,7 @@ export function KesitAylikTakip({ trend }: { trend: Trend }) {
               {kesitler.map((k) => (
                 <th key={k.id} className="whitespace-nowrap px-3 py-2.5 text-right text-[12px] font-medium text-tx-gri">
                   {formatDate(k.tarih)}
+                  <i className="block text-[10px] not-italic opacity-70">{egitimYili(k.tarih)}</i>
                   <i className="block text-[10px] not-italic opacity-70">{tr(k.kurumSayisi)} kurum</i>
                 </th>
               ))}
