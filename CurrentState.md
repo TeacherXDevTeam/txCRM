@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
 
+### Son İşlem — Kurum ↔ Okul eşleştirici (2026-09-09)
+Rapordaki kurum adları CRM'deki okul adlarıyla sistematik olarak farklı yazılıyor ("ALKEV Özel Okulları" ↔ "ALKEV", "İTÜ GVO İzmir" ↔ "İzmir İTÜ GVO"); birebir eşleştirme neredeyse hiçbirini yakalamıyor. `kurum-eslestir.ts` yazıldı: genel kelimeleri ("özel", "okulları", "koleji"…) atıp kalan ayırt edici kelime kümesini Jaccard ile karşılaştırıyor. Gerçek verilerle test: 15 kurumdan 11'i kesin eşleşti, 4'ü doğru şekilde eşleşmedi (Afyon İsabet ≠ İsabet Trabzon, Final Akademi ≠ Final Okulları). Alt küme eşleşmesi bilerek reddediliyor. Toplu eşleştirmede iki kurum aynı okula talip olursa ikisi de "onay gerekir"e düşüyor — sessizce yanlış bağlamak yerine. `schools.city` NOT NULL olduğu için şehir kurum/şube adından tahmin ediliyor, bulunamazsa kullanıcıdan istenecek.
+
 ### Son İşlem — Kurum Takip Adım 2: kesit tabloları (2026-09-09)
 `20260909000000_kesit_tablolari.sql` hazırlandı — 5 tablo (`report_kesit`, `report_kurum`, `report_sube`, `report_egitim`, `report_sertifika_ay`) + indeksler + RLS (admin/operasyon). **SQL Editor'de çalıştırılmayı bekliyor.** Kurum↔okul bağlantısı `report_kurum.school_id` üzerinden: rapordaki kurum adı her zaman saklanır, ada göre eşleşen okula bağlanır, eşleşmeyen kayıt engellenmez (school_id NULL kalır, eşleştirme ekranına düşer). Yükleme tek yerden (Raporlar → Kurum Takip); Okullar sayfasından tek tek yükleme yok. Ayrıca dev ortamı sorunu çözüldü: `npm run build` sonrası kalan prodüksiyon `.next`'i üzerine `next dev` gelince CSS 500 dönüyordu — `.next` silinip temiz başlatıldı.
 
