@@ -137,6 +137,21 @@ export async function kesitKaydet(g: KaydetGirdisi): Promise<KaydetSonucu> {
 }
 
 /**
+ * Bir kesiti siler.
+ *
+ * `report_kesit` üzerindeki ON DELETE CASCADE kurum/şube/eğitim/sertifika
+ * satırlarını da temizler — tek silme yeter. Okullar (`schools`) etkilenmez;
+ * `report_kurum.school_id` yalnızca bir referanstı.
+ *
+ * GERİ ALINAMAZ. Çağıran taraf onay almalı.
+ */
+export async function kesitSil(kesitId: string): Promise<void> {
+  const sb = createClient();
+  const { error } = await sb.from("report_kesit").delete().eq("id", kesitId);
+  if (error) throw new Error(`Kesit silinemedi: ${error.message}`);
+}
+
+/**
  * Eşleştirme ekranından yeni okul oluşturur, id'sini döner.
  *
  * IDEMPOTENT: aynı adda okul varsa yenisini açmaz, mevcudun id'sini döner.

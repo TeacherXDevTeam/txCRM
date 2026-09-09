@@ -43,6 +43,12 @@ export interface TrendKesit {
   tarih: string;
   /** O kesitte ölçülen kurum sayısı */
   kurumSayisi: number;
+  /** Yüklenen dosyanın adı — Kesitler ekranında gösterilir */
+  dosyaAdi: string | null;
+  /** Dosyada kaç satır vardı (denetim izi) */
+  kaynakSatir: number;
+  /** O kesitteki toplam öğretmen sayısı */
+  ogretmenSayisi: number;
 }
 
 export interface Trend {
@@ -113,12 +119,15 @@ function satiriHucreyeCevir(r: KurumRow): TrendHucre {
  * @param kurumSatirlari  report_kurum — tüm kesitlerin satırları bir arada
  */
 export function trendKur(
-  kesitSatirlari: { id: string; kesit_tarihi: string }[],
+  kesitSatirlari: { id: string; kesit_tarihi: string; dosya_adi?: string | null; kaynak_satir?: number }[],
   kurumSatirlari: KurumRow[],
 ): Trend {
   const kesitler = [...kesitSatirlari]
     .sort((a, b) => a.kesit_tarihi.localeCompare(b.kesit_tarihi))
-    .map((k) => ({ id: k.id, tarih: k.kesit_tarihi, kurumSayisi: 0 }));
+    .map((k) => ({
+      id: k.id, tarih: k.kesit_tarihi, kurumSayisi: 0,
+      dosyaAdi: k.dosya_adi ?? null, kaynakSatir: k.kaynak_satir ?? 0, ogretmenSayisi: 0,
+    }));
 
   const sira = new Map(kesitler.map((k, i) => [k.id, i]));
 
@@ -155,6 +164,7 @@ export function trendKur(
       adSirasi.set(anahtar, i);
     }
     kesitler[i].kurumSayisi++;
+    kesitler[i].ogretmenSayisi += r.ogretmen_sayisi;
   }
 
   const liste = [...kurumlar.values()];

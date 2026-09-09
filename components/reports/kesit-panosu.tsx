@@ -11,6 +11,7 @@ import { KesitSubeAnalizi } from "./kesit-sube-analizi";
 import { KesitEgitimAnalizi } from "./kesit-egitim-analizi";
 import { KesitDagilim } from "./kesit-dagilim";
 import { KesitAylikTakip } from "./kesit-aylik-takip";
+import { KesitListesi } from "./kesit-liste";
 import type { Trend } from "./kesit-trend";
 import { YazdirButonu } from "./print-button";
 import {
@@ -27,7 +28,7 @@ import {
 } from "./kurum-eslestir";
 import { useRouter } from "next/navigation";
 
-type Sayfa = "karsilastirma" | "sube" | "egitim" | "aylik";
+type Sayfa = "karsilastirma" | "sube" | "egitim" | "aylik" | "kesitler";
 type Gorunum = { tip: Sayfa } | { tip: "kurum"; kurumAdi: string };
 
 const SAYFALAR: { key: Sayfa; ad: string }[] = [
@@ -35,6 +36,7 @@ const SAYFALAR: { key: Sayfa; ad: string }[] = [
   { key: "sube",          ad: "Şube Analizi" },
   { key: "egitim",        ad: "Eğitim Analizi" },
   { key: "aylik",         ad: "Aylık Takip" },
+  { key: "kesitler",      ad: "Kesitler" },
 ];
 
 interface PanoProps {
@@ -403,6 +405,7 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
           )}
           {gorunum.tip === "sube" && <KesitSubeAnalizi kurumlar={kesit.kurumlar} />}
           {gorunum.tip === "egitim" && <KesitEgitimAnalizi kurumlar={kesit.kurumlar} />}
+          {gorunum.tip === "kesitler" && <KesitListesi trend={trend} />}
           {gorunum.tip === "aylik" && (
             <KesitAylikTakip trend={trend ?? { kesitler: [], kurumlar: [], toplam: [], toplamSabit: [], sabitKurumSayisi: 0 }} />
           )}
