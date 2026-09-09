@@ -82,6 +82,27 @@ export function KesitEslestirme({
     return k?.tip === "yeni" && !k.sehir.trim();
   });
 
+  /*
+   * Aynı okula birden çok kurum bağlanıyorsa bu neredeyse her zaman hatadır:
+   * o okulun detay sayfasında iki kurumun verisi üst üste biner. Bulanık
+   * eşleştirme bunu zaten "onay gerekir"e düşürüyor, ama HATIRLANAN kararlar
+   * o kontrolü atlıyor — bu yüzden burada karar listesi üzerinden bakılır.
+   */
+  const cakisanOkullar = useMemo(() => {
+    const sahipler = new Map<string, string[]>();
+    for (const [kurum, k] of Object.entries(kararlar)) {
+      if (k.tip !== "okul") continue;
+      const l = sahipler.get(k.schoolId);
+      if (l) l.push(kurum); else sahipler.set(k.schoolId, [kurum]);
+    }
+    return [...sahipler.entries()]
+      .filter(([, kurumlarr]) => kurumlarr.length > 1)
+      .map(([schoolId, kurumlarr]) => ({
+        okulAdi: okullar.find((o) => o.id === schoolId)?.name ?? "(bilinmeyen okul)",
+        kurumlar: kurumlarr,
+      }));
+  }, [kararlar, okullar]);
+
   const yeniSayisi = Object.values(kararlar).filter((k) => k.tip === "yeni").length;
   const baglananSayisi = Object.values(kararlar).filter((k) => k.tip === "okul").length;
   const yokSayisi = Object.values(kararlar).filter((k) => k.tip === "yok").length;
@@ -130,6 +151,26 @@ export function KesitEslestirme({
               renk={yeniSayisi ? "text-tx-kirmizi" : "text-tx-metin"} />
         <Kutu etiket="Bağlanmayacak" deger={yokSayisi} renk="text-tx-gri" />
       </div>
+
+      {cakisanOkullar.length > 0 && (
+        <div className="rounded border-l-[3px] border-tx-kirmizi bg-white px-4 py-3 text-[13px]">
+          <p className="font-medium text-tx-metin">
+            {tr(cakisanOkullar.length)} okula birden fazla kurum bağlanıyor
+          </p>
+          <p className="mt-0.5 text-tx-gri">
+            Aynı okula iki kurum bağlanırsa o okulun sayfasında ikisinin verisi karışır.
+            Her satırda yalnızca birini bırakın.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {cakisanOkullar.map((c) => (
+              <li key={c.okulAdi} className="text-tx-metin">
+                <b className="font-medium">{c.okulAdi}</b>
+                <span className="text-tx-gri"> ← {c.kurumlar.join(" · ")}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {yokSayisi > 0 && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border-l-[3px] border-tx-cizgi bg-white px-4 py-3 text-[13px] text-tx-gri">
