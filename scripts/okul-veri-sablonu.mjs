@@ -41,9 +41,34 @@ if (!csvYolu) {
 }
 if (!existsSync(csvYolu)) { console.error(`\n  ✗ Bulunamadı: ${csvYolu}\n`); process.exit(1); }
 
-const wb = xlsx.read(readFileSync(csvYolu), { type: "buffer", raw: true });
+/*
+ * CSV UTF-8 OLARAK OKUNUR. xlsx, ham buffer verildiğinde CSV'yi UTF-8
+ * saymıyor ve Türkçe karakterler bozuluyor:
+ *   "Okulları" → "OkullarÄ±",  "İstanbul" → "Ä°stanbul"
+ * Metne çevirip `type: "string"` vermek bunu kesin çözer. Baştaki BOM
+ * ayrıca temizlenir, yoksa ilk sütun adının başına yapışır.
+ */
+const csvMetin = readFileSync(csvYolu, "utf8").replace(/^\uFEFF/, "");
+const wb = xlsx.read(csvMetin, { type: "string", raw: true });
 const satirlar = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
 if (satirlar.length === 0) { console.error("\n  ✗ CSV boş.\n"); process.exit(1); }
+
+/*
+ * Bozuk kodlama sessizce geçmesin. İki yön de kontrol edilir:
+ *  - U+FFFD: dosya UTF-8 DEĞİL (ör. Windows-1254 / ISO-8859-9), okunamayan bayt
+ *  - "Ä±", "Ã¶"...: dosya bir kez daha yanlış çevrilmiş (UTF-8, Latin-1 sanılmış)
+ * İlk sürüm yalnız ikinciye bakıyordu ve ISO-8859-9 dosyayı sessizce geçiriyordu.
+ */
+if (csvMetin.includes("\uFFFD")) {
+  console.error("\n  ✗ CSV UTF-8 değil — okunamayan karakter var.");
+  console.error("    Supabase → SQL Editor → sonuç tablosunun üstündeki \"Download CSV\" ile indirin.\n");
+  process.exit(1);
+}
+if (/Ä±|Ä°|ÅŸ|Ã¼|Ã¶|ÄŸ|Ã§|Ã–|Ãœ/.test(csvMetin)) {
+  console.error("\n  ✗ CSV'de bozuk Türkçe karakter var (bir kez fazla çevrilmiş).");
+  console.error("    Örnek: \"Okulları\" yerine \"OkullarÄ±\". Dosyayı yeniden indirin.\n");
+  process.exit(1);
+}
 
 const gerekli = ["id", "okul_adi", "il", "ilce", "koordinator_sayisi", "sozlesme_sayisi", "beklenen_ogretmen"];
 const eksikSutun = gerekli.filter((k) => !(k in satirlar[0]));
