@@ -10,6 +10,8 @@ import { KesitKarsilastirma } from "./kesit-karsilastirma";
 import { KesitSubeAnalizi } from "./kesit-sube-analizi";
 import { KesitEgitimAnalizi } from "./kesit-egitim-analizi";
 import { KesitDagilim } from "./kesit-dagilim";
+import { KesitAylikTakip } from "./kesit-aylik-takip";
+import type { Trend } from "./kesit-trend";
 import { YazdirButonu } from "./print-button";
 import {
   UstSerit, RaporBasligi, Bolum, Pano, Kpi, Halka, YatayBarlar,
@@ -22,24 +24,27 @@ import type { KayitliKesit } from "./kesit-map";
 import type { OkulAdayi } from "./kurum-eslestir";
 import { useRouter } from "next/navigation";
 
-type Sayfa = "karsilastirma" | "sube" | "egitim";
+type Sayfa = "karsilastirma" | "sube" | "egitim" | "aylik";
 type Gorunum = { tip: Sayfa } | { tip: "kurum"; kurumAdi: string };
 
 const SAYFALAR: { key: Sayfa; ad: string }[] = [
   { key: "karsilastirma", ad: "Kurum Karşılaştırma" },
   { key: "sube",          ad: "Şube Analizi" },
   { key: "egitim",        ad: "Eğitim Analizi" },
+  { key: "aylik",         ad: "Aylık Takip" },
 ];
 
 interface PanoProps {
   kullaniciId: string;
   okullar: OkulAdayi[];
   kayitli: KayitliKesit | null;
+  /** Kaydedilmiş tüm kesitlerin zaman serisi — Aylık Takip sekmesi */
+  trend: Trend | null;
   /** Şema uygulanmamışsa sunucudan gelen hata */
   semaHatasi: string | null;
 }
 
-export function KesitPanosu({ kullaniciId, okullar, kayitli, semaHatasi }: PanoProps) {
+export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, semaHatasi }: PanoProps) {
   const router = useRouter();
   // Kaydedilmiş kesit varsa onunla açılır; yükleme yapılınca üzerine yazılır.
   const [kesit, setKesit] = useState<Kesit | null>(
@@ -273,6 +278,9 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, semaHatasi }: PanoP
           )}
           {gorunum.tip === "sube" && <KesitSubeAnalizi kurumlar={kesit.kurumlar} />}
           {gorunum.tip === "egitim" && <KesitEgitimAnalizi kurumlar={kesit.kurumlar} />}
+          {gorunum.tip === "aylik" && (
+            <KesitAylikTakip trend={trend ?? { kesitler: [], kurumlar: [], toplam: [], toplamSabit: [], sabitKurumSayisi: 0 }} />
+          )}
         </>
       )}
     </div>

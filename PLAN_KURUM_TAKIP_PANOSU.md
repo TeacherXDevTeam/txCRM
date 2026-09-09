@@ -194,7 +194,7 @@ Bugünkü markalı kurum raporu yeni tablolardan okur. KPI'lar: Öğretmen · At
 
 Tüm kurumların şubeleri / eğitimleri tek tabloda, kurum filtresiyle. "Hiç Başlamayan %" sütununda renk skalası ters (yüksek = kırmızı).
 
-### Adım 7 — Aylık Takip sekmesi
+### Adım 7 — Aylık Takip sekmesi ✅ (2026-09-09)
 
 **Excel'de bu sayfa her ay elle kopyala-yapıştır gerektiriyor. CRM'de bedava** — her kesit zaten tarihli. Yapılacak tek şey tüm kesitleri çekip zaman serisi çizmek:
 
