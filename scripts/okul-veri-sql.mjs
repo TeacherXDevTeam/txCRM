@@ -29,22 +29,36 @@ const KAYIT_SAHIBI =
 const DURUMLAR = new Set(["aktif", "suresi_doldu", "iptal"]);
 const ODEMELER = new Set(["odeme_bekleniyor", "kismi", "tamamlandi"]);
 
-const [, , dosya] = process.argv;
-if (!dosya) { console.error("\n  Kullanım: node scripts/okul-veri-sql.mjs <okul-veri-girisi.xlsx>\n"); process.exit(1); }
+const argv = process.argv.slice(2);
+const bi = argv.indexOf("--bitis");
+const varsayilanBitisHam = bi >= 0 ? argv[bi + 1] : null;
+if (bi >= 0) argv.splice(bi, 2);
+const [dosya] = argv;
+
+if (!dosya) {
+  console.error("\n  Kullanım: node scripts/okul-veri-sql.mjs <okul-veri-girisi.xlsx> [--bitis GG.AA.YYYY]");
+  console.error("    --bitis: başlangıcı olup bitişi boş bırakılan satırlar için ortak bitiş tarihi\n");
+  process.exit(1);
+}
 if (!existsSync(dosya)) { console.error(`\n  ✗ Bulunamadı: ${dosya}\n`); process.exit(1); }
 
 const wb = xlsx.read(readFileSync(dosya));
 const sayfa = (ad) => (wb.Sheets[ad] ? xlsx.utils.sheet_to_json(wb.Sheets[ad], { defval: "" }) : []);
 
 const q = (v) => `'${String(v).replace(/'/g, "''")}'`;
-const bos = (v) => String(v ?? "").trim() === "";
-const metin = (v) => String(v ?? "").trim();
+/* Supabase CSV'si NULL'u "null" metni olarak yazıyor — boş sayılır. */
+const NULL_METINLERI = new Set(["null", "NULL", "undefined", "-"]);
+const metin = (v) => {
+  const s = String(v ?? "").trim();
+  return NULL_METINLERI.has(s) ? "" : s;
+};
+const bos = (v) => metin(v) === "";
 const sayi = (v) => {
-  const n = Number(String(v ?? "").replace(/\s/g, "").replace(/\./g, "").replace(",", "."));
+  const n = Number(metin(v).replace(/\s/g, "").replace(/\./g, "").replace(",", "."));
   return Number.isFinite(n) ? n : null;
 };
 /** "GG.AA.YYYY" ya da Excel tarih sayısı → "YYYY-MM-DD" */
-const tarih = (v) => {
+function tarihCevir(v) {
   const s = metin(v);
   if (!s) return null;
   let m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
@@ -59,8 +73,30 @@ const tarih = (v) => {
   return null;
 };
 
+/*
+ * "Sözleşme Durumu" sütunu iki farklı şeyi taşıyabiliyor. Kullanıcı 17 satırda
+ * 'pasif' yazdı — bu bir sözleşme durumu DEĞİL, okul durumu (o kurumla
+ * çalışılmıyor, sözleşme de yok). Ayrım değerin hangi enum'a ait olduğundan
+ * çıkarılır; 'aktif' ikisinde de var, orada tarihlere bakılır.
+ */
+const OKUL_DURUMLARI = new Set(["aktif", "pasif", "potansiyel"]);
+const YALNIZ_OKUL = new Set(["pasif", "potansiyel"]);
+
+/*
+ * Ortak bitiş tarihi. Kullanıcının dosyasında 84 satırda başlangıç vardı ama
+ * bitiş yoktu ve hepsi aynı gün başlıyordu; her satırı elle doldurtmak yerine
+ * bir kez verilir. YALNIZ BOŞ OLANLARA uygulanır — dosyada yazan bir bitiş
+ * tarihi asla ezilmez.
+ */
+const varsayilanBitis = varsayilanBitisHam ? tarihCevir(varsayilanBitisHam) : null;
+if (varsayilanBitisHam && !varsayilanBitis) {
+  console.error(`\n  ✗ --bitis değeri okunamadı: "${varsayilanBitisHam}" (GG.AA.YYYY bekleniyor)\n`);
+  process.exit(1);
+}
+
 const uyarilar = [];
 const okulGuncelle = [];
+const okulDurumu = [];
 const sozlesmeEkle = [];
 const sozlesmeGuncelle = [];
 
@@ -78,8 +114,9 @@ for (const [i, r] of sayfa("Okul ve Sözleşme").entries()) {
     okulGuncelle.push(`update schools set ${set.join(", ")}, updated_at = now() where id = ${q(id)};  -- ${ad}`);
   }
 
-  const bas = tarih(r["Sözleşme Başlangıç (GG.AA.YYYY)"]);
-  const bit = tarih(r["Sözleşme Bitiş (GG.AA.YYYY)"]);
+  const bas = tarihCevir(r["Sözleşme Başlangıç (GG.AA.YYYY)"]);
+  // Dosyadaki bitiş önceliklidir; yoksa --bitis devreye girer
+  const bit = tarihCevir(r["Sözleşme Bitiş (GG.AA.YYYY)"]) ?? (bas ? varsayilanBitis : null);
   const bekl = bos(r["Beklenen Öğretmen"]) ? null : sayi(r["Beklenen Öğretmen"]);
   const durum = metin(r["Sözleşme Durumu"]) || "aktif";
   const odeme = metin(r["Ödeme Durumu"]) || "odeme_bekleniyor";
@@ -89,6 +126,16 @@ for (const [i, r] of sayfa("Okul ve Sözleşme").entries()) {
    * Öğretmen" doldurulmuşsa mevcut sözleşme güncellenir — yoksa o alan
    * sessizce yok sayılırdı ve rozet gitmezdi.
    */
+  /*
+   * Yalnız okula ait bir durum yazılmışsa ('pasif' / 'potansiyel'):
+   * sözleşme AÇILMAZ, okulun durumu güncellenir.
+   */
+  if (YALNIZ_OKUL.has(durum)) {
+    okulDurumu.push(`update schools set status = ${q(durum)}, updated_at = now() where id = ${q(id)};  -- ${ad}`);
+    if (bas || bit) uyarilar.push(`satır ${satirNo} (${ad}): "${durum}" işaretli ama sözleşme tarihi de var — sözleşme yazılmadı`);
+    continue;
+  }
+
   if (durum === "(var)" || odeme === "(var)") {
     if (bekl !== null) {
       sozlesmeGuncelle.push(
@@ -101,6 +148,10 @@ for (const [i, r] of sayfa("Okul ve Sözleşme").entries()) {
   }
 
   if (bas && bit) {
+    // Canlı sözleşmesi olan okul fiilen aktiftir
+    if (durum === "aktif" && OKUL_DURUMLARI.has("aktif")) {
+      okulDurumu.push(`update schools set status = 'aktif', updated_at = now() where id = ${q(id)};  -- ${ad}`);
+    }
     if (!DURUMLAR.has(durum)) { uyarilar.push(`satır ${satirNo} (${ad}): geçersiz sözleşme durumu "${durum}"`); continue; }
     if (!ODEMELER.has(odeme)) { uyarilar.push(`satır ${satirNo} (${ad}): geçersiz ödeme durumu "${odeme}"`); continue; }
     if (bit < bas) { uyarilar.push(`satır ${satirNo} (${ad}): bitiş tarihi başlangıçtan önce`); continue; }
@@ -113,7 +164,8 @@ for (const [i, r] of sayfa("Okul ve Sözleşme").entries()) {
       `${bekl ?? "null"}, ${q(durum)}, ${q(odeme)}${not ? `, ${q(not)}` : ""});  -- ${ad}`
     );
   } else if (bas || bit) {
-    uyarilar.push(`satır ${satirNo} (${ad}): sözleşme tarihlerinden yalnız biri dolu — yazılmadı`);
+    uyarilar.push(`satır ${satirNo} (${ad}): sözleşme tarihlerinden yalnız biri dolu — yazılmadı` +
+      (bas && !varsayilanBitis ? ` (--bitis ile ortak bir bitiş tarihi verebilirsiniz)` : ""));
   } else if (bekl !== null) {
     uyarilar.push(`satır ${satirNo} (${ad}): beklenen öğretmen yazıldı ama sözleşme tarihleri boş. ` +
                   `Bu alan sözleşmede tutuluyor, sözleşme olmadan kaydedilemez.`);
@@ -146,6 +198,9 @@ parcalar.push(`-- Üretim: ${new Date().toISOString().slice(0, 10)}`);
 parcalar.push(`--`);
 parcalar.push(`-- Tamamı TEK TRANSACTION. Bir satır patlarsa hiçbiri yazılmaz.`);
 parcalar.push(`-- Boş bırakılan alanlar yazılmaz; mevcut değerlerin üzerine boş geçilmez.`);
+if (varsayilanBitis) {
+  parcalar.push(`-- Bitişi boş bırakılan sözleşmelere ortak bitiş tarihi: ${varsayilanBitis}`);
+}
 parcalar.push(``);
 parcalar.push(`begin;`);
 parcalar.push(``);
@@ -153,6 +208,10 @@ parcalar.push(``);
 if (okulGuncelle.length) {
   parcalar.push(`-- ${okulGuncelle.length} okulun konumu`);
   parcalar.push(...okulGuncelle, ``);
+}
+if (okulDurumu.length) {
+  parcalar.push(`-- ${okulDurumu.length} okulun durumu`);
+  parcalar.push(...okulDurumu, ``);
 }
 if (sozlesmeGuncelle.length) {
   parcalar.push(`-- ${sozlesmeGuncelle.length} mevcut sözleşmede beklenen öğretmen sayısı`);
@@ -171,7 +230,8 @@ parcalar.push(`commit;`);
 const ciktiYolu = join(dirname(dosya), basename(dosya).replace(/\.xlsx?$/i, "") + ".sql");
 writeFileSync(ciktiYolu, parcalar.join("\n") + "\n", "utf8");
 
-console.log(`\n  Okul güncelleme : ${okulGuncelle.length}`);
+console.log(`\n  Konum güncelleme: ${okulGuncelle.length}`);
+console.log(`  Durum güncelleme: ${okulDurumu.length}`);
 console.log(`  Sözleşme (yeni) : ${sozlesmeEkle.length}`);
 console.log(`  Sözleşme (günc.): ${sozlesmeGuncelle.length}`);
 console.log(`  Koordinatör     : ${koordinator.length}`);

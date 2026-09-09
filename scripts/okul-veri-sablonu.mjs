@@ -79,11 +79,21 @@ if (eksikSutun.length > 0) {
   process.exit(1);
 }
 
-const say = (v) => Number(String(v ?? "").trim() || 0);
-const bos = (v) => String(v ?? "").trim() === "";
+const say = (v) => Number(temiz(v) || 0);
+/*
+ * Supabase CSV dışa aktarımı NULL'ları "null" METNİ olarak yazıyor.
+ * Şablona olduğu gibi kopyalanınca kullanıcı 101 hücrede "null" görüyor ve
+ * dolu sanıp bırakıyor; sonra sayıya çevrilemiyor. Boş sayılır.
+ */
+const NULL_METINLERI = new Set(["null", "NULL", "undefined", "-"]);
+const temiz = (v) => {
+  const s = String(v ?? "").trim();
+  return NULL_METINLERI.has(s) ? "" : s;
+};
+const bos = (v) => temiz(v) === "";
 
 const eksikli = satirlar.filter((r) =>
-  bos(r.il) || String(r.il).trim() === "Belirtilmedi" || bos(r.ilce) ||
+  bos(r.il) || temiz(r.il) === "Belirtilmedi" || bos(r.ilce) ||
   say(r.koordinator_sayisi) === 0 || say(r.sozlesme_sayisi) === 0 || bos(r.beklenen_ogretmen)
 );
 
@@ -91,9 +101,9 @@ const eksikli = satirlar.filter((r) =>
 const okulSayfasi = eksikli.map((r) => ({
   "okul_id (DEĞİŞTİRMEYİN)": r.id,
   "Okul Adı (DEĞİŞTİRMEYİN)": r.okul_adi,
-  "İl": String(r.il).trim() === "Belirtilmedi" ? "" : r.il,
-  "İlçe": r.ilce,
-  "Beklenen Öğretmen": r.beklenen_ogretmen,
+  "İl": temiz(r.il) === "Belirtilmedi" ? "" : temiz(r.il),
+  "İlçe": temiz(r.ilce),
+  "Beklenen Öğretmen": temiz(r.beklenen_ogretmen),
   "Sözleşme Başlangıç (GG.AA.YYYY)": "",
   "Sözleşme Bitiş (GG.AA.YYYY)": "",
   "Sözleşme Bedeli (TL)": "",
@@ -136,7 +146,7 @@ xlsx.utils.book_append_sheet(cikti, xlsx.utils.json_to_sheet(yardim), "Yardım")
 const ciktiYolu = join(dirname(csvYolu), "okul-veri-girisi.xlsx");
 writeFileSync(ciktiYolu, xlsx.write(cikti, { type: "buffer", bookType: "xlsx" }));
 
-const konumEksik = eksikli.filter((r) => bos(r.il) || String(r.il).trim() === "Belirtilmedi" || bos(r.ilce)).length;
+const konumEksik = eksikli.filter((r) => bos(r.il) || temiz(r.il) === "Belirtilmedi" || bos(r.ilce)).length;
 const koordEksik = eksikli.filter((r) => say(r.koordinator_sayisi) === 0).length;
 const sozEksik = eksikli.filter((r) => say(r.sozlesme_sayisi) === 0).length;
 const beklEksik = eksikli.filter((r) => bos(r.beklenen_ogretmen)).length;
