@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Info } from "lucide-react";
 import type { KesitKurum } from "./kesit";
 import { tr } from "./brand";
 
@@ -10,17 +10,17 @@ type Sutun =
   | "ilerlemeOrtalamasi" | "tamamlanmaOrani" | "sertifikaSayisi"
   | "sertifikaAlan" | "hicBaslamayan" | "tumunuTamamlayan";
 
-const BASLIKLAR: { alan: Sutun; ad: string; sayi: boolean; tersRenk?: boolean }[] = [
+const BASLIKLAR: { alan: Sutun; ad: string; sayi: boolean; tersRenk?: boolean; aciklama?: string }[] = [
   { alan: "kurumAdi",           ad: "Kurum",              sayi: false },
-  { alan: "ogretmenSayisi",     ad: "Öğretmen",           sayi: true },
-  { alan: "subeSayisi",         ad: "Şube",               sayi: true },
-  { alan: "egitimSayisi",       ad: "Eğitim",             sayi: true },
-  { alan: "ilerlemeOrtalamasi", ad: "İlerleme Ort.",      sayi: true },
-  { alan: "tamamlanmaOrani",    ad: "Tamamlanma Oranı",   sayi: true },
-  { alan: "sertifikaSayisi",    ad: "Sertifika",          sayi: true },
-  { alan: "sertifikaAlan",      ad: "Sertifika Alan",     sayi: true },
-  { alan: "hicBaslamayan",      ad: "Hiç Başlamayan",     sayi: true, tersRenk: true },
-  { alan: "tumunuTamamlayan",   ad: "Tümünü Tamamlayan",  sayi: true },
+  { alan: "ogretmenSayisi",     ad: "Öğretmen",           sayi: true,  aciklama: "Kurumdaki toplam öğretmen sayısı (e-posta ile tekilleştirilir)." },
+  { alan: "subeSayisi",         ad: "Şube",               sayi: true,  aciklama: "Kurumun rapordaki şube sayısı." },
+  { alan: "egitimSayisi",       ad: "Eğitim",             sayi: true,  aciklama: "Kuruma atanan farklı eğitim sayısı. (Özet dökümde bilinmez, — görünür.)" },
+  { alan: "ilerlemeOrtalamasi", ad: "İlerleme Ort.",      sayi: true,  aciklama: "Öğretmenlerin tüm eğitimlerdeki ilerleme yüzdelerinin ortalaması. Yarım kalan (kısmi) ilerleme de sayılır." },
+  { alan: "tamamlanmaOrani",    ad: "Tamamlanma Oranı",   sayi: true,  aciklama: "Tamamen bitirilen eğitimlerin atanan eğitimlere oranı. Yarım kalanlar sayılmaz. İlerleme Ort. ile farkı = başlanmış ama bitmemiş iş." },
+  { alan: "sertifikaSayisi",    ad: "Sertifika",          sayi: true,  aciklama: "Verilen toplam sertifika sayısı (bir öğretmen birden çok alabilir)." },
+  { alan: "sertifikaAlan",      ad: "Sertifika Alan",     sayi: true,  aciklama: "En az bir sertifika almış öğretmen sayısı." },
+  { alan: "hicBaslamayan",      ad: "Hiç Başlamayan",     sayi: true, tersRenk: true, aciklama: "Hiçbir eğitime başlamamış öğretmen sayısı (ve kuruma oranı). Yüksek olması kötüdür." },
+  { alan: "tumunuTamamlayan",   ad: "Tümünü Tamamlayan",  sayi: true,  aciklama: "Atanan tüm eğitimlerini bitiren öğretmen sayısı (ve kuruma oranı)." },
 ];
 
 /** Düşük → yüksek kırmızıdan yeşile; tersRenk'te yüksek kırmızı. */
@@ -68,11 +68,12 @@ export function KesitKarsilastirma({
                 className={`cursor-pointer select-none border-b border-tx-siyah px-2.5 pb-2.5 pt-3 text-[11.5px] font-medium text-tx-gri hover:text-tx-metin ${
                   b.sayi ? "text-right" : "text-left"
                 } ${sirala === b.alan ? "text-tx-metin" : ""}`}
-                title="Sıralamak için tıklayın"
+                title={b.aciklama ? `${b.aciklama}\n\n(Sıralamak için tıklayın)` : "Sıralamak için tıklayın"}
               >
                 <span className={`inline-flex items-center gap-1 ${b.sayi ? "flex-row-reverse" : ""}`}>
                   {b.ad}
                   {sirala === b.alan && <ArrowUpDown className="h-3 w-3 text-tx-kirmizi" />}
+                  {b.aciklama && <Info className="h-3 w-3 shrink-0 text-tx-gri opacity-60" aria-hidden />}
                 </span>
               </th>
             ))}

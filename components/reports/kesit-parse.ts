@@ -1,4 +1,7 @@
-"use client";
+// Bu modülde "use client" YOK ve olmasına gerek yok: hiçbir tarayıcı API'si
+// kullanmıyor, girdisi bir ArrayBuffer. Direktif varken Node'dan çağrılamıyordu
+// ve ayrıştırma mantığı test edilemiyordu — oysa buradaki sessiz hatalar en
+// pahalısı: yanlış formatı kabul etmek hata vermez, yanlış sayı üretir.
 
 import * as XLSX from "xlsx";
 import { norm, num } from "./parse-utils";

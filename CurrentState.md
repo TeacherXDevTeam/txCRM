@@ -1,6 +1,12 @@
 # TeacherX CRM — Mevcut Durum
 
-> Her işlem sonunda güncellenir. Son güncelleme: 2026-09-09
+> Her işlem sonunda güncellenir. Son güncelleme: 2026-09-14
+
+### Son İşlem — Rapor tablosu sütun açıklamaları (2026-09-14)
+Kurum Karşılaştırma tablosunun (`components/reports/kesit-karsilastirma.tsx`) sütun başlıklarına açıklama tooltip'i eklendi: her metrik için `aciklama` alanı + native `title` (overflow'da kırpılmaz) + yanında ⓘ ikonu (açıklama olduğunu belli eder). Özellikle İlerleme Ort. (kısmi ilerleme sayılır) ile Tamamlanma Oranı (yalnız bitmiş) farkı açıklandı. type-check temiz; henüz commit edilmedi.
+
+### Son İşlem — Test altyapısı ve 53 kontrol (2026-09-10)
+Kullanıcı `mattpocock/skills` reposunu verip CRM için ayrıntılı değerlendirme ve serbest geliştirme istedi. Repo `improve-codebase-architecture` / `codebase-design` yöntemini taşıyor: derin modül, sığ modül, seam, silme testi. Yöntem txCRM'e uygulandı; sıcak nokta analizi (son 60 commit) Raporlar modülünü işaret etti. EN BÜYÜK BULGU: projede hiç test yoktu — ne dosya ne bağımlılık. Oysa bu oturumda ~110 kontrol yazıldı ve hepsi çalıştıktan sonra silindi (geçici .mjs betikleri, elle kurulan Postgres veritabanları, geçici önizleme sayfaları). Vitest kuruldu (`npm test`) ve o kontrollerin kalıcı olanları geri getirildi: 53 test, dört dosya, 0,4 saniye. Kapsam bilerek yalnız SAF modüller — iş kurallarının yaşadığı yer orası ve bu projede yanlış çıkan her şey hesap kuralıydı (ağırlıklı ortalama, sabit sepet, null yayılımı, eşleştirme eşiği), ekran değil. İkinci düzeltme: `kesit-parse.ts`'teki `"use client"` gereksizdi (hiç tarayıcı API'si yok) ve ayrıştırıcıyı Node'dan test edilemez kılıyordu — kaldırıldı, 9 test eklendi. Üçüncü bulgu testle sabitlendi: `types/database.ts` numeric sütunlara `number` diyor ama kod her yerde `Number(...)` ile sarıyor; savunmanın çalıştığı teste bağlandı, kaldırılırsa test düşer.
 
 ### Son İşlem — Konum artık profil tamamlama şartı değil (2026-09-10)
 Kullanıcının isteği: konum beklenmesin, beklenen öğretmen şart kalsın. Kural il VE ilçe istiyordu; rapordan gelen kurumların çoğunda ilçe anlamlı bir bilgi değil ve o rozet 101 okulda kalıcı olarak açık kalıyordu. Sürekli açık kalan bir uyarı bakılmayan bir uyarıdır ve asıl eksikleri de gizler. Konum bilgisi duruyor — listede ve okul detayında görünüyor — yalnızca "profil tamam mı" hesabına girmiyor. Süzgeç çipi de kalktı. Tarayıcıda kullanıcının gerçek sayılarıyla doğrulandı: çipler artık Koordinatör eksik (42) · Sözleşme eksik (17) · Beklenen öğretmen eksik (101). Toplam yine 101 görünüyor çünkü beklenen öğretmen HER okulda eksik ve kullanıcı o şartın kalmasını istedi; sayının düşmesi için o sütunun doldurulması gerekiyor.
