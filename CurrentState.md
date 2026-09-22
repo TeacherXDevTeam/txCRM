@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-22
 
+'### Son İşlem — Okul formunda beklenen öğretmen sayısı (2026-09-22)
+School-form ile okul detayına "Beklenen Öğretmen Sayısı" alanı eklendi — görünür ve düzenlenebilir. Gruplu okullarda alan kilitli, grup adı notu gösterilir. type-check+build+test temiz.
+
 ### Son İşlem — Birleşik hedef grubu (Mektebim) (2026-09-22)
 `schools.beklenen_grup` kolonu eklendi (migration `20260922100000`). "Mektebim Grubu" = Girne+Mektebim+Kavram+BİL+Anakent; 4000 hedefi Mektebim'de, diğerleri NULL. Rapor kontrolü grubu görünce üyelerin TOPLAM öğretmenini 4000 ile karşılaştırıp tek satır gösteriyor (gruplu okullar bireysel gösterilmez). Veri: `supabase/seed/beklenen-grup-mektebim.sql`. **ÖNEMLİ:** ALTER kod deploy'undan önce çalışmalı.
 

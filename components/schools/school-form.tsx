@@ -29,6 +29,7 @@ export function SchoolForm({ school, onClose }: SchoolFormProps) {
     school_type:           school?.school_type           ?? "ozel",
     status:                school?.status                ?? "potansiyel",
     partnership_start_date: school?.partnership_start_date ?? "",
+    beklenen_ogretmen_sayisi: school?.beklenen_ogretmen_sayisi?.toString() ?? "",
     notes:                 school?.notes                 ?? "",
   });
 
@@ -60,6 +61,9 @@ export function SchoolForm({ school, onClose }: SchoolFormProps) {
       school_type: form.school_type as School["school_type"],
       status: form.status as School["status"],
       partnership_start_date: form.partnership_start_date || null,
+      beklenen_ogretmen_sayisi: form.beklenen_ogretmen_sayisi.trim()
+        ? parseInt(form.beklenen_ogretmen_sayisi, 10)
+        : null,
       notes: form.notes.trim() || null,
     };
 
@@ -131,13 +135,31 @@ export function SchoolForm({ school, onClose }: SchoolFormProps) {
                 <option value="pasif">Pasif</option>
               </Select>
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Ortaklık Başlangıç Tarihi</label>
               <Input
                 type="date"
                 value={form.partnership_start_date}
                 onChange={(e) => set("partnership_start_date", e.target.value)}
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Beklenen Öğretmen Sayısı</label>
+              <Input
+                type="number"
+                min="0"
+                value={form.beklenen_ogretmen_sayisi}
+                onChange={(e) => set("beklenen_ogretmen_sayisi", e.target.value)}
+                placeholder="örn. 120"
+                disabled={!!school?.beklenen_grup}
+              />
+              {school?.beklenen_grup ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  Bu okul <b>{school.beklenen_grup}</b> içinde; hedef grup toplamında tutulur.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-gray-500">Rapor kontrolü bununla karşılaştırır. Boş = kontrol yok.</p>
+              )}
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Notlar</label>
