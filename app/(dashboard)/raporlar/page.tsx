@@ -31,8 +31,14 @@ export default async function RaporlarPage() {
   }
 
   // Eşleştirme için okul listesi
-  const { data: okulRows } = await supabase
+  // beklenen_grup kolonu migration uygulanmadan deploy edilirse sorgu patlamasın:
+  // önce gruplu sorgula, kolon yoksa gruplusuz sürümle devam et (sıra-bağımsız).
+  const okulSorgu = await supabase
     .from("schools").select("id, name, status, beklenen_ogretmen_sayisi, beklenen_grup").order("name");
+  const okulRows = okulSorgu.error
+    ? ((await supabase.from("schools").select("id, name, status, beklenen_ogretmen_sayisi").order("name")).data ?? [])
+        .map((o) => ({ ...o, beklenen_grup: null as string | null }))
+    : okulSorgu.data;
   const okullar: OkulAdayi[] = okulRows ?? [];
   // school_id → sezon hedefi / birleşik hedef grubu (rapor kontrolü için)
   const beklenenByOkul = new Map<string, number | null>(
