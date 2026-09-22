@@ -94,6 +94,11 @@ export interface KesitKurum {
    * ham yüklemede / eşleşmemiş kurumda / hedefsiz okulda null.
    */
   beklenenOgretmen?: number | null;
+  /**
+   * Eşleşen okul bir birleşik hedef grubuna aitse grup adı (schools.beklenen_grup).
+   * Gruplu kurumlar bireysel değil, grup toplamı olarak kontrol edilir.
+   */
+  beklenenGrup?: string | null;
   subeler: KesitSube[];
   /** Özet dökümde boş kalır */
   egitimler: KesitEgitim[];

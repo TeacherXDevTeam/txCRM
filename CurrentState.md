@@ -2,6 +2,9 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-22
 
+### Son İşlem — Birleşik hedef grubu (Mektebim) (2026-09-22)
+`schools.beklenen_grup` kolonu eklendi (migration `20260922100000`). "Mektebim Grubu" = Girne+Mektebim+Kavram+BİL+Anakent; 4000 hedefi Mektebim'de, diğerleri NULL. Rapor kontrolü grubu görünce üyelerin TOPLAM öğretmenini 4000 ile karşılaştırıp tek satır gösteriyor (gruplu okullar bireysel gösterilmez). Veri: `supabase/seed/beklenen-grup-mektebim.sql`. **ÖNEMLİ:** ALTER kod deploy'undan önce çalışmalı.
+
 ### Son İşlem — Beklenen öğretmen sayısı + rapor kontrolü (2026-09-22)
 Okullara `beklenen_ogretmen_sayisi` kolonu eklendi (migration `20260922000000`). Excel'den 49 kurumun sezon hedefi normalize isim eşleşmesiyle import ediliyor (`supabase/seed/beklenen-ogretmen.sql`; 14 sayısal olmayan değer atlandı). Rapor sayfası (`kesit-panosu`) artık her yüklemede eşleşen okulun hedefiyle gerçek öğretmen sayısını karşılaştırıp fazla/eksik sapmaları "dikkat" bloğunda gösteriyor (tam eşitlik). type-check + build + 53 test temiz. **ÖNEMLİ:** kod deploy'undan ÖNCE ALTER çalıştırılmalı (yoksa schools sorgusu kırılır).
 
