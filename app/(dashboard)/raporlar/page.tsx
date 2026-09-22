@@ -31,8 +31,13 @@ export default async function RaporlarPage() {
   }
 
   // Eşleştirme için okul listesi
-  const { data: okulRows } = await supabase.from("schools").select("id, name, status").order("name");
+  const { data: okulRows } = await supabase
+    .from("schools").select("id, name, status, beklenen_ogretmen_sayisi").order("name");
   const okullar: OkulAdayi[] = okulRows ?? [];
+  // school_id → sezon hedefi (rapor kontrolü için)
+  const beklenenByOkul = new Map<string, number | null>(
+    (okulRows ?? []).map((o) => [o.id, o.beklenen_ogretmen_sayisi]),
+  );
 
   // En son kaydedilmiş kesit. Tablolar yoksa sessizce boş görünmek yerine
   // kullanıcıya ne yapması gerektiğini söyleriz.
@@ -59,14 +64,20 @@ export default async function RaporlarPage() {
       supabase.from("report_sertifika_ay").select("*").in("kurum_id", kurumIdListesi),
     ]);
 
+    const okulBaglantilari = Object.fromEntries((kurumlar ?? []).map((r) => [r.kurum_adi, r.school_id]));
     kayitli = {
       id: k.id,
       kesitTarihi: k.kesit_tarihi,
       dosyaAdi: k.dosya_adi,
       kaynakSatir: k.kaynak_satir,
-      kurumlar: satirlariKesiteCevir(kurumlar ?? [], subeler ?? [], egitimler ?? [], sertAylar ?? []),
+      // Her kuruma eşleşen okulun sezon hedefini iliştir (rapor kontrolü için)
+      kurumlar: satirlariKesiteCevir(kurumlar ?? [], subeler ?? [], egitimler ?? [], sertAylar ?? [])
+        .map((kur) => {
+          const okulId = okulBaglantilari[kur.kurumAdi];
+          return { ...kur, beklenenOgretmen: okulId ? beklenenByOkul.get(okulId) ?? null : null };
+        }),
       kurumIdleri: Object.fromEntries((kurumlar ?? []).map((r) => [r.kurum_adi, r.id])),
-      okulBaglantilari: Object.fromEntries((kurumlar ?? []).map((r) => [r.kurum_adi, r.school_id])),
+      okulBaglantilari,
     };
   }
 
