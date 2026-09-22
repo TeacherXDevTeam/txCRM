@@ -395,7 +395,7 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
                   </li>
                 ))}
                 {sapmalar.length > GOSTER && (
-                  <li className="list-none text-tx-gri">…ve {tr(sapmalar.length - GOSTER)} kurum daha (Kurum Karşılaştırma tablosuna bakın).</li>
+                  <li className="list-none text-tx-gri">…ve {tr(sapmalar.length - GOSTER)} kurum daha — Kurum Karşılaştırma tablosunda <b className="text-tx-metin">Sapma</b> sütununa göre sıralayın.</li>
                 )}
               </ul>
             </div>
