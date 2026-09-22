@@ -31,12 +31,21 @@ export default async function RaporlarPage() {
   }
 
   // Eşleştirme için okul listesi
-  const { data: okulRows } = await supabase
-    .from("schools").select("id, name, status, beklenen_ogretmen_sayisi").order("name");
+  // beklenen_grup kolonu migration uygulanmadan deploy edilirse sorgu patlamasın:
+  // önce gruplu sorgula, kolon yoksa gruplusuz sürümle devam et (sıra-bağımsız).
+  const okulSorgu = await supabase
+    .from("schools").select("id, name, status, beklenen_ogretmen_sayisi, beklenen_grup").order("name");
+  const okulRows = okulSorgu.error
+    ? ((await supabase.from("schools").select("id, name, status, beklenen_ogretmen_sayisi").order("name")).data ?? [])
+        .map((o) => ({ ...o, beklenen_grup: null as string | null }))
+    : okulSorgu.data;
   const okullar: OkulAdayi[] = okulRows ?? [];
-  // school_id → sezon hedefi (rapor kontrolü için)
+  // school_id → sezon hedefi / birleşik hedef grubu (rapor kontrolü için)
   const beklenenByOkul = new Map<string, number | null>(
     (okulRows ?? []).map((o) => [o.id, o.beklenen_ogretmen_sayisi]),
+  );
+  const grupByOkul = new Map<string, string | null>(
+    (okulRows ?? []).map((o) => [o.id, o.beklenen_grup]),
   );
 
   // En son kaydedilmiş kesit. Tablolar yoksa sessizce boş görünmek yerine
@@ -74,7 +83,11 @@ export default async function RaporlarPage() {
       kurumlar: satirlariKesiteCevir(kurumlar ?? [], subeler ?? [], egitimler ?? [], sertAylar ?? [])
         .map((kur) => {
           const okulId = okulBaglantilari[kur.kurumAdi];
-          return { ...kur, beklenenOgretmen: okulId ? beklenenByOkul.get(okulId) ?? null : null };
+          return {
+            ...kur,
+            beklenenOgretmen: okulId ? beklenenByOkul.get(okulId) ?? null : null,
+            beklenenGrup: okulId ? grupByOkul.get(okulId) ?? null : null,
+          };
         }),
       kurumIdleri: Object.fromEntries((kurumlar ?? []).map((r) => [r.kurum_adi, r.id])),
       okulBaglantilari,

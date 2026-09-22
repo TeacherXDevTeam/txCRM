@@ -203,6 +203,11 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
                     Ortaklık: {formatDate(school.partnership_start_date)}
                   </span>
                 )}
+                {school.beklenen_grup ? (
+                  <span>Beklenen öğretmen: <b className="text-gray-700">{school.beklenen_grup}</b> (grup)</span>
+                ) : school.beklenen_ogretmen_sayisi != null && (
+                  <span>Beklenen öğretmen: <b className="text-gray-700">{school.beklenen_ogretmen_sayisi.toLocaleString("tr-TR")}</b></span>
+                )}
               </div>
               <div className="mt-2">
                 <SchoolStatusBadge status={school.status} />

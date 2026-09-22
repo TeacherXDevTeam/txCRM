@@ -93,6 +93,7 @@ export interface Database {
           status: "aktif" | "pasif" | "potansiyel";
           partnership_start_date: string | null;
           beklenen_ogretmen_sayisi: number | null;
+          beklenen_grup: string | null;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -105,6 +106,7 @@ export interface Database {
           status?: "aktif" | "pasif" | "potansiyel";
           partnership_start_date?: string | null;
           beklenen_ogretmen_sayisi?: number | null;
+          beklenen_grup?: string | null;
           notes?: string | null;
         };
         Relationships: [];
@@ -116,6 +118,7 @@ export interface Database {
           status?: "aktif" | "pasif" | "potansiyel";
           partnership_start_date?: string | null;
           beklenen_ogretmen_sayisi?: number | null;
+          beklenen_grup?: string | null;
           notes?: string | null;
         };
       };
