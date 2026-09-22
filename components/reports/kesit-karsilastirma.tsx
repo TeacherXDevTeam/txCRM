@@ -8,7 +8,8 @@ import { tr } from "./brand";
 type Sutun =
   | "kurumAdi" | "ogretmenSayisi" | "subeSayisi" | "egitimSayisi"
   | "ilerlemeOrtalamasi" | "tamamlanmaOrani" | "sertifikaSayisi"
-  | "sertifikaAlan" | "hicBaslamayan" | "tumunuTamamlayan";
+  | "sertifikaAlan" | "hicBaslamayan" | "tumunuTamamlayan"
+  | "beklenenOgretmen" | "sapma";
 
 const BASLIKLAR: { alan: Sutun; ad: string; sayi: boolean; tersRenk?: boolean; aciklama?: string }[] = [
   { alan: "kurumAdi",           ad: "Kurum",              sayi: false },
@@ -21,7 +22,16 @@ const BASLIKLAR: { alan: Sutun; ad: string; sayi: boolean; tersRenk?: boolean; a
   { alan: "sertifikaAlan",      ad: "Sertifika Alan",     sayi: true,  aciklama: "En az bir sertifika almış öğretmen sayısı." },
   { alan: "hicBaslamayan",      ad: "Hiç Başlamayan",     sayi: true, tersRenk: true, aciklama: "Hiçbir eğitime başlamamış öğretmen sayısı (ve kuruma oranı). Yüksek olması kötüdür." },
   { alan: "tumunuTamamlayan",   ad: "Tümünü Tamamlayan",  sayi: true,  aciklama: "Atanan tüm eğitimlerini bitiren öğretmen sayısı (ve kuruma oranı)." },
+  { alan: "beklenenOgretmen",   ad: "Beklenen",           sayi: true,  aciklama: "Okulun sezon hedefi (olması gereken öğretmen sayısı). Gruplu okulda grup adı görünür; hedefsizde —." },
+  { alan: "sapma",              ad: "Sapma",              sayi: true, tersRenk: true, aciklama: "Gerçek − beklenen. Eksik (−) kırmızı. Gruplu okullar tek tek değil grup toplamı olarak kontrol edilir (— görünür)." },
 ];
+
+/** Satır bazında sapma. Gruplu okul veya hedefsiz okul için null (grup toplu kontrol edilir). */
+function sapmaOf(k: KesitKurum): number | null {
+  if (k.beklenenGrup) return null;
+  if (k.beklenenOgretmen == null) return null;
+  return k.ogretmenSayisi - k.beklenenOgretmen;
+}
 
 /** Düşük → yüksek kırmızıdan yeşile; tersRenk'te yüksek kırmızı. */
 function skala(oran: number, ters = false): string {
@@ -42,6 +52,15 @@ export function KesitKarsilastirma({
   const sirali = useMemo(() => {
     const k = [...kurumlar];
     k.sort((a, b) => {
+      // Beklenen / Sapma: değeri olmayanlar (grup üyesi / hedefsiz) her zaman en sonda
+      if (sirala === "sapma" || sirala === "beklenenOgretmen") {
+        const x = sirala === "sapma" ? sapmaOf(a) : a.beklenenOgretmen ?? null;
+        const y = sirala === "sapma" ? sapmaOf(b) : b.beklenenOgretmen ?? null;
+        if (x == null && y == null) return 0;
+        if (x == null) return 1;
+        if (y == null) return -1;
+        return artan ? x - y : y - x;
+      }
       const x = a[sirala] ?? -1, y = b[sirala] ?? -1;
       const s = typeof x === "string" || typeof y === "string"
         ? String(x).localeCompare(String(y), "tr")
@@ -110,6 +129,19 @@ export function KesitKarsilastirma({
                   %{Math.round((k.tumunuTamamlayan / Math.max(k.ogretmenSayisi, 1)) * 100)}
                 </span>
               </td>
+              <td className="border-b border-tx-cizgi px-2.5 py-2.5 text-right tabular-nums">
+                {k.beklenenGrup
+                  ? <span className="text-[10px] text-tx-gri">{k.beklenenGrup}</span>
+                  : k.beklenenOgretmen == null ? <span className="text-tx-gri">—</span> : tr(k.beklenenOgretmen)}
+              </td>
+              {(() => {
+                const s = sapmaOf(k);
+                return (
+                  <td className={`border-b border-tx-cizgi px-2.5 py-2.5 text-right font-semibold tabular-nums ${s == null ? "" : s < 0 ? "text-tx-kirmizi" : "text-tx-metin"}`}>
+                    {s == null ? <span className="font-normal text-tx-gri">—</span> : `${s > 0 ? "+" : ""}${tr(s)}`}
+                  </td>
+                );
+              })()}
             </tr>
           ))}
         </tbody>
@@ -125,6 +157,8 @@ export function KesitKarsilastirma({
             <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + (k.sertifikaAlan ?? 0), 0))}</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + k.hicBaslamayan, 0))}</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + k.tumunuTamamlayan, 0))}</td>
+            <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + (k.beklenenGrup ? 0 : k.beklenenOgretmen ?? 0), 0))}</td>
+            <td className="px-2.5 py-2.5 text-right tabular-nums">{(() => { const t = kurumlar.reduce((a, k) => a + (sapmaOf(k) ?? 0), 0); return `${t > 0 ? "+" : ""}${tr(t)}`; })()}</td>
           </tr>
         </tfoot>
       </table>

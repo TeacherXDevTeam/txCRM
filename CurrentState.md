@@ -2,7 +2,10 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-22
 
-'### Son İşlem — Okul formunda beklenen öğretmen sayısı (2026-09-22)
+'### Son İşlem — Kurum Karşılaştırma tablosuna Beklenen/Sapma (2026-09-22)
+Kesit-karsilastirma tablosuna "Beklenen" ve "Sapma" sütunları eklendi (sıralanabilir, gruplu okulda grup adı + —). Attention notu Sapma sütununa yönlendiriyor.
+
+### Son İşlem — Okul formunda beklenen öğretmen sayısı (2026-09-22)
 School-form ile okul detayına "Beklenen Öğretmen Sayısı" alanı eklendi — görünür ve düzenlenebilir. Gruplu okullarda alan kilitli, grup adı notu gösterilir. type-check+build+test temiz.
 
 ### Son İşlem — Birleşik hedef grubu (Mektebim) (2026-09-22)
