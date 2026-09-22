@@ -2,7 +2,10 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-22
 
-'### Son İşlem — Kurum Karşılaştırma tablosuna Beklenen/Sapma (2026-09-22)
+'### Son İşlem — Beklenen öğretmen sapması tek kaynağa taşındı (2026-09-22)
+Sapma hesabı iki yerde ayrı yazılmıştı (pano uyarısı ve Kurum Karşılaştırma alt satırı) ve farklı sonuç veriyordu: tablo "Öğretmen"i tüm kurumlardan, "Beklenen"i yalnız grupsuzlardan, "Sapma"yı hem grupluları hem hedefsizleri dışlayarak topluyordu; gruplu okulların sapması toplamda hiç görünmüyordu. Hesap `kesit.ts`'te `sapmaHesapla` adlı tek saf fonksiyona taşındı, iki ekran da onu kullanıyor; alt satırdaki Beklenen ile Sapma artık aynı kontrol kümesinden (gruplar dahil) geliyor, hedefsiz kurum sayısı ipucunda yazıyor. Alt satırdaki sertifika toplamı bilinmiyorsa "0" yerine "—" gösteriyor. Hata örneği birebir gerileme testine çevrildi; 14 yeni test, toplam 67. Tarayıcıda pano (A −10, G +10) ile alt satır (Beklenen 300, Sapma 0) tutarlı.
+
+### Son İşlem — Kurum Karşılaştırma tablosuna Beklenen/Sapma (2026-09-22)
 Kesit-karsilastirma tablosuna "Beklenen" ve "Sapma" sütunları eklendi (sıralanabilir, gruplu okulda grup adı + —). Attention notu Sapma sütununa yönlendiriyor.
 
 ### Son İşlem — Okul formunda beklenen öğretmen sayısı (2026-09-22)

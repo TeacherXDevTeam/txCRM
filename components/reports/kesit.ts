@@ -497,3 +497,114 @@ export function kurumlariBirlestir(kurumlar: KesitKurum[]): KesitKurum | null {
       .sort((a, b) => a.ay.localeCompare(b.ay)),
   };
 }
+
+/* ------------------------------------------------- beklenen öğretmen kontrolü --- */
+
+/**
+ * Bir kontrol birimi: ya tek bir kurum (bireysel hedef) ya da birleşik bir
+ * hedef grubu (üyelerin gerçek öğretmenleri toplanıp tek hedefle karşılaştırılır).
+ */
+export interface SapmaBirimi {
+  ad: string;
+  beklenen: number;
+  gercek: number;
+  /** gercek − beklenen; eksik negatif */
+  fark: number;
+  grup: boolean;
+  /** Gruptaki kurum sayısı; bireyselde 1 */
+  kurumSayisi: number;
+}
+
+export interface SapmaOzeti {
+  /** Hedefi olan tüm birimler — farkı 0 olanlar dahil */
+  birimler: SapmaBirimi[];
+  /** Yalnız sapması olanlar, mutlak farka göre büyükten küçüğe */
+  sapmalar: SapmaBirimi[];
+  /** Kontrol edilen birimlerin toplamları — AYNI küme üzerinden */
+  toplam: { beklenen: number; gercek: number; fark: number };
+  /** Hedefi olmayan (ve gruba da girmeyen) kurum sayısı — kontrol dışı */
+  hedefsizKurum: number;
+}
+
+/**
+ * Beklenen öğretmen kontrolünün TEK kaynağı.
+ *
+ * Önce bu hesap iki yerde ayrı ayrı yazılmıştı (pano uyarısı ve karşılaştırma
+ * tablosunun alt satırı) ve farklı sonuç veriyordu: tablo "Öğretmen"i bütün
+ * kurumlardan, "Beklenen"i yalnız grupsuzlardan, "Sapma"yı ise hem grupluları
+ * hem hedefsizleri dışlayarak topluyordu — üç sütun üç ayrı küme. Gruplu
+ * okulların sapması tablo toplamında hiç görünmüyordu.
+ *
+ * Kurallar:
+ * - Grupsuz, hedefi olan kurum → bireysel birim
+ * - Gruplu kurumlar → grup birimi: gerçek = üyelerin toplamı, beklenen = üyelerin
+ *   hedefleri toplamı (hedef genelde tek üyede, "lider"de durur)
+ * - Hedefi 0 olan grup ve hedefsiz grupsuz kurum → kontrol dışı
+ * - `toplam` yalnız kontrol edilen birimlerden; beklenen ile gerçek aynı
+ *   küme üzerinden olduğu için toplam.fark = toplam.gercek − toplam.beklenen
+ */
+export function sapmaHesapla(kurumlar: KesitKurum[]): SapmaOzeti {
+  const birimler: SapmaBirimi[] = [];
+  let hedefsizKurum = 0;
+
+  const gruplar = new Map<string, { beklenen: number; gercek: number; adet: number }>();
+  for (const k of kurumlar) {
+    if (k.beklenenGrup) {
+      const g = gruplar.get(k.beklenenGrup) ?? { beklenen: 0, gercek: 0, adet: 0 };
+      g.beklenen += k.beklenenOgretmen ?? 0;
+      g.gercek += k.ogretmenSayisi;
+      g.adet += 1;
+      gruplar.set(k.beklenenGrup, g);
+    } else if (k.beklenenOgretmen != null) {
+      birimler.push({
+        ad: k.kurumAdi, beklenen: k.beklenenOgretmen, gercek: k.ogretmenSayisi,
+        fark: k.ogretmenSayisi - k.beklenenOgretmen, grup: false, kurumSayisi: 1,
+      });
+    } else {
+      hedefsizKurum++;
+    }
+  }
+
+  for (const [ad, g] of gruplar) {
+    if (g.beklenen <= 0) { hedefsizKurum += g.adet; continue; }
+    birimler.push({
+      ad, beklenen: g.beklenen, gercek: g.gercek,
+      fark: g.gercek - g.beklenen, grup: true, kurumSayisi: g.adet,
+    });
+  }
+
+  const toplamBeklenen = birimler.reduce((a, b) => a + b.beklenen, 0);
+  const toplamGercek = birimler.reduce((a, b) => a + b.gercek, 0);
+
+  return {
+    birimler,
+    sapmalar: birimler
+      .filter((b) => b.fark !== 0)
+      .sort((a, b) => Math.abs(b.fark) - Math.abs(a.fark) || a.ad.localeCompare(b.ad, "tr")),
+    toplam: { beklenen: toplamBeklenen, gercek: toplamGercek, fark: toplamGercek - toplamBeklenen },
+    hedefsizKurum,
+  };
+}
+
+/**
+ * Tablo satırı için sapma. Gruplu kurumda null: o kurum tek başına değil,
+ * grubuyla birlikte kontrol edilir. Hedefsizde de null.
+ */
+export function kurumSapmasi(k: KesitKurum): number | null {
+  if (k.beklenenGrup || k.beklenenOgretmen == null) return null;
+  return k.ogretmenSayisi - k.beklenenOgretmen;
+}
+
+/**
+ * Bilinmeyen değer yayan toplam: bir kurum bile null ise sonuç null.
+ * Kısmi toplam "0 sertifika" ya da "sertifika düştü" gibi okunurdu.
+ */
+export function bilinirseTopla(kurumlar: KesitKurum[], sec: (k: KesitKurum) => number | null): number | null {
+  let t = 0;
+  for (const k of kurumlar) {
+    const v = sec(k);
+    if (v == null) return null;
+    t += v;
+  }
+  return t;
+}
