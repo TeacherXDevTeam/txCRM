@@ -346,6 +346,40 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
             </ul>
           </div>
         )}
+
+        {kesit && (() => {
+          // Beklenen öğretmen sayısı kontrolü — eşleşen okulun sezon hedefi ile
+          // rapordaki gerçek öğretmen sayısını karşılaştırır (tam eşitlik).
+          const sapmalar = kesit.kurumlar
+            .filter((k) => k.beklenenOgretmen != null && k.ogretmenSayisi !== k.beklenenOgretmen)
+            .map((k) => ({ ad: k.kurumAdi, beklenen: k.beklenenOgretmen as number, gercek: k.ogretmenSayisi, fark: k.ogretmenSayisi - (k.beklenenOgretmen as number) }))
+            .sort((a, b) => Math.abs(b.fark) - Math.abs(a.fark));
+          if (!sapmalar.length) return null;
+          const eksik = sapmalar.filter((s) => s.fark < 0).length;
+          const fazla = sapmalar.length - eksik;
+          const GOSTER = 12;
+          return (
+            <div className="mt-3 rounded-md border-l-[3px] border-tx-kirmizi bg-white px-3 py-2 text-[13px]">
+              <p className="flex items-center gap-1.5 font-semibold">
+                <AlertTriangle className="h-4 w-4" /> Öğretmen sayısı kontrolü — {tr(sapmalar.length)} kurumda sapma
+                <span className="font-normal text-tx-gri">({tr(eksik)} eksik · {tr(fazla)} fazla)</span>
+              </p>
+              <ul className="ml-5 mt-1 list-disc space-y-0.5 text-xs text-tx-gri">
+                {sapmalar.slice(0, GOSTER).map((s) => (
+                  <li key={s.ad}>
+                    <b className="text-tx-metin">{s.ad}</b>: beklenen {tr(s.beklenen)}, raporda {tr(s.gercek)} →{" "}
+                    <b className={s.fark < 0 ? "text-tx-kirmizi" : "text-tx-metin"}>
+                      {s.fark > 0 ? "+" : ""}{tr(s.fark)} {s.fark < 0 ? "eksik" : "fazla"}
+                    </b>
+                  </li>
+                ))}
+                {sapmalar.length > GOSTER && (
+                  <li className="list-none text-tx-gri">…ve {tr(sapmalar.length - GOSTER)} kurum daha (Kurum Karşılaştırma tablosuna bakın).</li>
+                )}
+              </ul>
+            </div>
+          );
+        })()}
       </div>
 
       {kesit && eslestirmede ? (

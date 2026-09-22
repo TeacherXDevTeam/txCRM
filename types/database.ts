@@ -92,6 +92,7 @@ export interface Database {
           school_type: "devlet" | "ozel" | "vakif";
           status: "aktif" | "pasif" | "potansiyel";
           partnership_start_date: string | null;
+          beklenen_ogretmen_sayisi: number | null;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -103,6 +104,7 @@ export interface Database {
           school_type?: "devlet" | "ozel" | "vakif";
           status?: "aktif" | "pasif" | "potansiyel";
           partnership_start_date?: string | null;
+          beklenen_ogretmen_sayisi?: number | null;
           notes?: string | null;
         };
         Relationships: [];
@@ -113,6 +115,7 @@ export interface Database {
           school_type?: "devlet" | "ozel" | "vakif";
           status?: "aktif" | "pasif" | "potansiyel";
           partnership_start_date?: string | null;
+          beklenen_ogretmen_sayisi?: number | null;
           notes?: string | null;
         };
       };

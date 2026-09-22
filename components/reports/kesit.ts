@@ -88,6 +88,12 @@ export interface KesitKurum {
   tumunuTamamlayan: number;
   /** Atanan eğitim sayısı kurumun tipik değerinden farklı olan öğretmen adedi */
   esitsizAtama: number;
+  /**
+   * Eşleşen okulun sezon hedefi (schools.beklenen_ogretmen_sayisi).
+   * Yalnızca DB'den yüklenen kesitlerde ve okul eşleşmesi + hedef varsa dolar;
+   * ham yüklemede / eşleşmemiş kurumda / hedefsiz okulda null.
+   */
+  beklenenOgretmen?: number | null;
   subeler: KesitSube[];
   /** Özet dökümde boş kalır */
   egitimler: KesitEgitim[];

@@ -1,6 +1,9 @@
 # TeacherX CRM — Mevcut Durum
 
-> Her işlem sonunda güncellenir. Son güncelleme: 2026-09-14
+> Her işlem sonunda güncellenir. Son güncelleme: 2026-09-22
+
+### Son İşlem — Beklenen öğretmen sayısı + rapor kontrolü (2026-09-22)
+Okullara `beklenen_ogretmen_sayisi` kolonu eklendi (migration `20260922000000`). Excel'den 49 kurumun sezon hedefi normalize isim eşleşmesiyle import ediliyor (`supabase/seed/beklenen-ogretmen.sql`; 14 sayısal olmayan değer atlandı). Rapor sayfası (`kesit-panosu`) artık her yüklemede eşleşen okulun hedefiyle gerçek öğretmen sayısını karşılaştırıp fazla/eksik sapmaları "dikkat" bloğunda gösteriyor (tam eşitlik). type-check + build + 53 test temiz. **ÖNEMLİ:** kod deploy'undan ÖNCE ALTER çalıştırılmalı (yoksa schools sorgusu kırılır).
 
 ### Son İşlem — Rapor tablosu sütun açıklamaları (2026-09-14)
 Kurum Karşılaştırma tablosunun (`components/reports/kesit-karsilastirma.tsx`) sütun başlıklarına açıklama tooltip'i eklendi: her metrik için `aciklama` alanı + native `title` (overflow'da kırpılmaz) + yanında ⓘ ikonu (açıklama olduğunu belli eder). Özellikle İlerleme Ort. (kısmi ilerleme sayılır) ile Tamamlanma Oranı (yalnız bitmiş) farkı açıklandı. type-check temiz; henüz commit edilmedi.
