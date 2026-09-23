@@ -5,7 +5,7 @@ import { Upload, FileSpreadsheet, X, AlertTriangle, ArrowLeft } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { excelOku, SUTUNLAR_DETAYLI, SUTUNLAR_OZET } from "./kesit-parse";
-import { kesitUret, kesitUretOzet, kurumlariBirlestir, TUMU_ADI, type Kesit, type KesitKurum } from "./kesit";
+import { kesitUret, kesitUretOzet, kurumlariBirlestir, sapmaHesapla, TUMU_ADI, type Kesit, type KesitKurum } from "./kesit";
 import { KesitKarsilastirma } from "./kesit-karsilastirma";
 import { KesitSubeAnalizi } from "./kesit-sube-analizi";
 import { KesitEgitimAnalizi } from "./kesit-egitim-analizi";
@@ -350,29 +350,9 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
         {kesit && (() => {
           // Beklenen öğretmen sayısı kontrolü — eşleşen okulun sezon hedefi ile
           // rapordaki gerçek öğretmen sayısını karşılaştırır (tam eşitlik).
-          type Sapma = { ad: string; beklenen: number; gercek: number; fark: number; grup?: boolean; okulSayisi?: number };
-
-          // Bireysel: gruba ait OLMAYAN, hedefi olan kurumlar
-          const bireysel: Sapma[] = kesit.kurumlar
-            .filter((k) => !k.beklenenGrup && k.beklenenOgretmen != null && k.ogretmenSayisi !== k.beklenenOgretmen)
-            .map((k) => ({ ad: k.kurumAdi, beklenen: k.beklenenOgretmen as number, gercek: k.ogretmenSayisi, fark: k.ogretmenSayisi - (k.beklenenOgretmen as number) }));
-
-          // Grup: aynı gruptaki üyelerin gerçek öğretmeni toplanır, tek hedefle karşılaştırılır.
-          // Hedef gruptaki tek üyede (lider) tutulur; üye toplamı = grup hedefi.
-          const gruplar = new Map<string, { hedef: number; gercek: number; adet: number }>();
-          for (const k of kesit.kurumlar) {
-            if (!k.beklenenGrup) continue;
-            const g = gruplar.get(k.beklenenGrup) ?? { hedef: 0, gercek: 0, adet: 0 };
-            g.hedef += k.beklenenOgretmen ?? 0;
-            g.gercek += k.ogretmenSayisi;
-            g.adet += 1;
-            gruplar.set(k.beklenenGrup, g);
-          }
-          const grupSapma: Sapma[] = [...gruplar.entries()]
-            .filter(([, g]) => g.hedef > 0 && g.gercek !== g.hedef)
-            .map(([ad, g]) => ({ ad, beklenen: g.hedef, gercek: g.gercek, fark: g.gercek - g.hedef, grup: true, okulSayisi: g.adet }));
-
-          const sapmalar = [...grupSapma, ...bireysel].sort((a, b) => Math.abs(b.fark) - Math.abs(a.fark));
+          // Hesap kesit.ts'te tek kaynakta; karşılaştırma tablosunun alt satırı
+          // da aynı fonksiyonu kullanır, ikisi farklı sonuç veremez.
+          const { sapmalar } = sapmaHesapla(kesit.kurumlar);
           if (!sapmalar.length) return null;
           const eksik = sapmalar.filter((s) => s.fark < 0).length;
           const fazla = sapmalar.length - eksik;
@@ -387,7 +367,7 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
                 {sapmalar.slice(0, GOSTER).map((s) => (
                   <li key={s.ad}>
                     <b className="text-tx-metin">{s.ad}</b>
-                    {s.grup && <span className="text-tx-gri"> ({tr(s.okulSayisi ?? 0)} okul toplam)</span>}
+                    {s.grup && <span className="text-tx-gri"> ({tr(s.kurumSayisi)} okul toplam)</span>}
                     : beklenen {tr(s.beklenen)}, raporda {tr(s.gercek)} →{" "}
                     <b className={s.fark < 0 ? "text-tx-kirmizi" : "text-tx-metin"}>
                       {s.fark > 0 ? "+" : ""}{tr(s.fark)} {s.fark < 0 ? "eksik" : "fazla"}

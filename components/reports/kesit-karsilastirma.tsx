@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ArrowUpDown, Info } from "lucide-react";
-import type { KesitKurum } from "./kesit";
+import { kurumSapmasi, sapmaHesapla, bilinirseTopla, type KesitKurum } from "./kesit";
 import { tr } from "./brand";
 
 type Sutun =
@@ -26,12 +26,8 @@ const BASLIKLAR: { alan: Sutun; ad: string; sayi: boolean; tersRenk?: boolean; a
   { alan: "sapma",              ad: "Sapma",              sayi: true, tersRenk: true, aciklama: "Gerçek − beklenen. Eksik (−) kırmızı. Gruplu okullar tek tek değil grup toplamı olarak kontrol edilir (— görünür)." },
 ];
 
-/** Satır bazında sapma. Gruplu okul veya hedefsiz okul için null (grup toplu kontrol edilir). */
-function sapmaOf(k: KesitKurum): number | null {
-  if (k.beklenenGrup) return null;
-  if (k.beklenenOgretmen == null) return null;
-  return k.ogretmenSayisi - k.beklenenOgretmen;
-}
+/* Satır sapması ve toplamlar kesit.ts'teki tek kaynaktan gelir (sapmaHesapla). */
+const sapmaOf = kurumSapmasi;
 
 /** Düşük → yüksek kırmızıdan yeşile; tersRenk'te yüksek kırmızı. */
 function skala(oran: number, ters = false): string {
@@ -48,6 +44,12 @@ export function KesitKarsilastirma({
 }: { kurumlar: KesitKurum[]; onKurumSec: (kurum: string) => void }) {
   const [sirala, setSirala] = useState<Sutun>("ilerlemeOrtalamasi");
   const [artan, setArtan] = useState(false);
+
+  // Alt satırdaki Beklenen/Sapma pano uyarısıyla AYNI hesaptan gelir.
+  const ozet = useMemo(() => sapmaHesapla(kurumlar), [kurumlar]);
+  // Bilinmeyen sertifika "0" değil "—": özet dökümde sertifika bilgisi yok.
+  const toplamSertifika = bilinirseTopla(kurumlar, (k) => k.sertifikaSayisi);
+  const toplamSertifikaAlan = bilinirseTopla(kurumlar, (k) => k.sertifikaAlan);
 
   const sirali = useMemo(() => {
     const k = [...kurumlar];
@@ -153,12 +155,18 @@ export function KesitKarsilastirma({
             <td className="px-2.5 py-2.5 text-right text-tx-gri">—</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">%{agirlikli(kurumlar, "ilerlemeOrtalamasi").toFixed(1)}</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">%{agirlikli(kurumlar, "tamamlanmaOrani").toFixed(1)}</td>
-            <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + (k.sertifikaSayisi ?? 0), 0))}</td>
-            <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + (k.sertifikaAlan ?? 0), 0))}</td>
+            <td className="px-2.5 py-2.5 text-right tabular-nums">{toplamSertifika == null ? "—" : tr(toplamSertifika)}</td>
+            <td className="px-2.5 py-2.5 text-right tabular-nums">{toplamSertifikaAlan == null ? "—" : tr(toplamSertifikaAlan)}</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + k.hicBaslamayan, 0))}</td>
             <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + k.tumunuTamamlayan, 0))}</td>
-            <td className="px-2.5 py-2.5 text-right tabular-nums">{tr(kurumlar.reduce((a, k) => a + (k.beklenenGrup ? 0 : k.beklenenOgretmen ?? 0), 0))}</td>
-            <td className="px-2.5 py-2.5 text-right tabular-nums">{(() => { const t = kurumlar.reduce((a, k) => a + (sapmaOf(k) ?? 0), 0); return `${t > 0 ? "+" : ""}${tr(t)}`; })()}</td>
+            <td className="px-2.5 py-2.5 text-right tabular-nums"
+                title={`Hedefi olan ${tr(ozet.birimler.length)} birim (gruplar dahil). ${tr(ozet.hedefsizKurum)} kurum hedefsiz, kontrol dışı.`}>
+              {ozet.birimler.length ? tr(ozet.toplam.beklenen) : "—"}
+            </td>
+            <td className={`px-2.5 py-2.5 text-right tabular-nums ${ozet.toplam.fark < 0 ? "text-tx-kirmizi" : ""}`}
+                title={`Kontrol edilen birimlerde raporda ${tr(ozet.toplam.gercek)} öğretmen, beklenen ${tr(ozet.toplam.beklenen)}.`}>
+              {ozet.birimler.length ? `${ozet.toplam.fark > 0 ? "+" : ""}${tr(ozet.toplam.fark)}` : "—"}
+            </td>
           </tr>
         </tfoot>
       </table>
