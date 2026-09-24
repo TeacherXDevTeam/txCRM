@@ -14,12 +14,14 @@ interface Props {
   total: number;
   incomplete: IncompleteSchool[];
   missingCounts: Record<string, number>; // etiket → kaç okulda eksik
+  /** Eksik hesabını besleyen sorgularda hata varsa — sayılar güvenilmez */
+  hata?: string | null;
 }
 
 /* Konum bilerek yok — bkz. okullar/page.tsx'teki gerekçe. */
 const FIELDS = ["Koordinatör", "Sözleşme", "Beklenen öğretmen"];
 
-export function SchoolCompleteness({ total, incomplete, missingCounts }: Props) {
+export function SchoolCompleteness({ total, incomplete, missingCounts, hata = null }: Props) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
 
@@ -30,6 +32,12 @@ export function SchoolCompleteness({ total, incomplete, missingCounts }: Props) 
 
   return (
     <div className="rounded-xl border bg-white">
+      {hata && (
+        <p className="border-b border-red-200 bg-red-50 px-5 py-2.5 text-[13px] text-red-800">
+          Eksik hesabı için gereken veri okunamadı ({hata}). Aşağıdaki sayılar
+          <b> güvenilmez</b> — okunamayan her şey &quot;eksik&quot; görünür.
+        </p>
+      )}
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-5 py-4 text-left">
         <div className="flex items-center gap-3">
           {open ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}

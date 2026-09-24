@@ -2,7 +2,10 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-22
 
-'### Son İşlem — Beklenen öğretmen sapması tek kaynağa taşındı (2026-09-22)
+'### Son İşlem — Profil tamamlama beklenen öğretmeni yanlış yerden okuyordu (2026-09-24)
+Kullanıcı beklenen öğretmen listesini girdiği halde Okullar sayfasında 107 okulun hepsi "Beklenen öğretmen eksik" görünüyordu. Sebep: #37–#39 ile hedef `schools.beklenen_ogretmen_sayisi` sütununa taşındı; Raporlar, okul detayı, okul formu ve kesit hesabı oraya geçti ama profil tamamlama hâlâ `contracts.expected_teacher_count`'a bakıyordu — tek kalan yer oydu. Kural sayfanın içinde satır arasında olduğu için ne test edilebiliyordu ne de kaynak değişince fark edildi. `components/schools/profil-eksikleri.ts` adlı saf modüle çıkarıldı, 10 test yazıldı (toplam 77). Birleşik hedef grubu da doğru işleniyor: hedef grup liderinde duruyorsa üyeler hedefsiz sayılmıyor. Ayrıca koordinatör/sözleşme sorgularının hatası sessizce yutuluyordu — hata olduğunda her şey "eksik" görünüyordu; artık ekranda kırmızı şeritle "bu sayılar güvenilmez" uyarısı çıkıyor. "Sözleşme eksik (107)" ayrı bir soru: 17 Pasif sayısı 09-09'daki SQL'in çalıştığını gösteriyor, aynı transaction 84 sözleşme de yazmıştı; sözleşmelerin hâlâ orada olup olmadığını `supabase/sorgular/profil_eksik_kontrol.sql` kesin söyleyecek.
+
+### Son İşlem — Beklenen öğretmen sapması tek kaynağa taşındı (2026-09-22)
 Sapma hesabı iki yerde ayrı yazılmıştı (pano uyarısı ve Kurum Karşılaştırma alt satırı) ve farklı sonuç veriyordu: tablo "Öğretmen"i tüm kurumlardan, "Beklenen"i yalnız grupsuzlardan, "Sapma"yı hem grupluları hem hedefsizleri dışlayarak topluyordu; gruplu okulların sapması toplamda hiç görünmüyordu. Hesap `kesit.ts`'te `sapmaHesapla` adlı tek saf fonksiyona taşındı, iki ekran da onu kullanıyor; alt satırdaki Beklenen ile Sapma artık aynı kontrol kümesinden (gruplar dahil) geliyor, hedefsiz kurum sayısı ipucunda yazıyor. Alt satırdaki sertifika toplamı bilinmiyorsa "0" yerine "—" gösteriyor. Hata örneği birebir gerileme testine çevrildi; 14 yeni test, toplam 67. Tarayıcıda pano (A −10, G +10) ile alt satır (Beklenen 300, Sapma 0) tutarlı.
 
 ### Son İşlem — Kurum Karşılaştırma tablosuna Beklenen/Sapma (2026-09-22)
