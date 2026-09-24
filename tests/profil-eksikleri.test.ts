@@ -9,8 +9,9 @@
 import { describe, it, expect } from "vitest";
 import { profilEksikleri, type ProfilOkulu } from "@/components/schools/profil-eksikleri";
 
-const O = (id: string, name: string, beklenen: number | null = null, grup: string | null = null): ProfilOkulu =>
-  ({ id, name, beklenen_ogretmen_sayisi: beklenen, beklenen_grup: grup });
+const O = (id: string, name: string, beklenen: number | null = null, grup: string | null = null,
+           status: string = "aktif"): ProfilOkulu =>
+  ({ id, name, beklenen_ogretmen_sayisi: beklenen, beklenen_grup: grup, status });
 
 const bos = new Set<string>();
 
@@ -79,5 +80,39 @@ describe("profilEksikleri — koordinatör ve sözleşme", () => {
   it("boş listede sıfır", () => {
     const o = profilEksikleri([], bos, bos);
     expect(o).toMatchObject({ eksikler: [], tamam: 0 });
+  });
+});
+
+describe("profilEksikleri — pasif okullar kapsam dışı", () => {
+  it("pasif okulu kuyruğa almaz ve toplamdan düşer", () => {
+    // Artık çalışılmayan kurumun eksiklerini kovalamak gürültü
+    const o = profilEksikleri(
+      [O("1", "Aktif eksik"), O("2", "Pasif eksik", null, null, "pasif")],
+      bos, bos,
+    );
+    expect(o.eksikler.map((e) => e.name)).toEqual(["Aktif eksik"]);
+    expect(o.toplam).toBe(1);
+    expect(o.kapsamDisi).toBe(1);
+    expect(o.sayilar["Sözleşme"]).toBe(1);
+  });
+
+  it("potansiyel okul kapsamda kalır", () => {
+    const o = profilEksikleri([O("1", "Potansiyel", null, null, "potansiyel")], bos, bos);
+    expect(o.toplam).toBe(1);
+    expect(o.kapsamDisi).toBe(0);
+  });
+
+  it("hepsi pasifse kuyruk boş, yüzde bölmesi patlamaz", () => {
+    const o = profilEksikleri([O("1", "A", null, null, "pasif")], bos, bos);
+    expect(o).toMatchObject({ eksikler: [], tamam: 0, toplam: 0, kapsamDisi: 1 });
+  });
+
+  it("hedef pasif grup liderindeyse aktif üye hedefsiz sayılmaz", () => {
+    const o = profilEksikleri(
+      [O("1", "Pasif lider", 200, "G", "pasif"), O("2", "Aktif üye", null, "G")],
+      new Set(["2"]), new Set(["2"]),
+    );
+    expect(o.eksikler).toHaveLength(0);
+    expect(o.toplam).toBe(1);
   });
 });

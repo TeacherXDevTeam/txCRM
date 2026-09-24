@@ -16,12 +16,14 @@ interface Props {
   missingCounts: Record<string, number>; // etiket → kaç okulda eksik
   /** Eksik hesabını besleyen sorgularda hata varsa — sayılar güvenilmez */
   hata?: string | null;
+  /** Pasif olduğu için hesaba girmeyen okul sayısı */
+  kapsamDisi?: number;
 }
 
 /* Konum bilerek yok — bkz. okullar/page.tsx'teki gerekçe. */
 const FIELDS = ["Koordinatör", "Sözleşme", "Beklenen öğretmen"];
 
-export function SchoolCompleteness({ total, incomplete, missingCounts, hata = null }: Props) {
+export function SchoolCompleteness({ total, incomplete, missingCounts, hata = null, kapsamDisi = 0 }: Props) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
 
@@ -45,6 +47,7 @@ export function SchoolCompleteness({ total, incomplete, missingCounts, hata = nu
             <h2 className="text-base font-semibold text-gray-900">Profil Tamamlama</h2>
             <p className="text-xs text-gray-500">
               {complete}/{total} okul tamam · {incomplete.length} okulda eksik bilgi
+              {kapsamDisi > 0 && <> · <span className="text-gray-400">{kapsamDisi} pasif okul kapsam dışı</span></>}
             </p>
           </div>
         </div>

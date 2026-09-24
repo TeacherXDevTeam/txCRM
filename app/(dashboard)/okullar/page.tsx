@@ -51,7 +51,8 @@ export default async function OkullarPage() {
           <Handshake className="h-4 w-4" /> Çalıştığımız Okullar
         </Link>
       </div>
-      <SchoolCompleteness total={schools.length} incomplete={ozet.eksikler} missingCounts={ozet.sayilar} hata={sorguHatasi} />
+      <SchoolCompleteness total={ozet.toplam} incomplete={ozet.eksikler} missingCounts={ozet.sayilar}
+          kapsamDisi={ozet.kapsamDisi} hata={sorguHatasi} />
 
       <SchoolsClient schools={schools} canWrite={canWrite} />
     </div>
