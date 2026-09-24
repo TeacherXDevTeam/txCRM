@@ -2,7 +2,10 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-22
 
-'### Son İşlem — Profil tamamlama beklenen öğretmeni yanlış yerden okuyordu (2026-09-24)
+'### Son İşlem — Pasif okullar profil tamamlama kapsamı dışında (2026-09-24)
+Artık çalışılmayan bir kurumun koordinatörünü, sözleşmesini ve hedefini kovalamak iş değil gürültü; 17 pasif okul kuyruğu şişirip asıl eksikleri gizliyordu. `profilEksikleri` artık `status = 'pasif'` okulları hesaba katmıyor; yüzde ve "x/y okul tamam" kapsamdaki okullar üzerinden, kaç okulun kapsam dışı kaldığı da başlıkta yazıyor. Bir incelik: grup hedefi TÜM okullardan toplanıyor, yalnız kapsamdakilerden değil — hedef pasif bir grup liderinde duruyorsa aktif üyeler hedefsiz sayılmamalı. Potansiyel okullar kapsamda kalıyor (sadece pasif çıkarıldı). 4 yeni test, toplam 81. Gerçek dağılımla (107 okul · 90 aktif · 17 pasif) tarayıcıda doğrulandı: "59/90 okul tamam · 31 okulda eksik bilgi · 17 pasif okul kapsam dışı".
+
+### Son İşlem — Profil tamamlama beklenen öğretmeni yanlış yerden okuyordu (2026-09-24)
 Kullanıcı beklenen öğretmen listesini girdiği halde Okullar sayfasında 107 okulun hepsi "Beklenen öğretmen eksik" görünüyordu. Sebep: #37–#39 ile hedef `schools.beklenen_ogretmen_sayisi` sütununa taşındı; Raporlar, okul detayı, okul formu ve kesit hesabı oraya geçti ama profil tamamlama hâlâ `contracts.expected_teacher_count`'a bakıyordu — tek kalan yer oydu. Kural sayfanın içinde satır arasında olduğu için ne test edilebiliyordu ne de kaynak değişince fark edildi. `components/schools/profil-eksikleri.ts` adlı saf modüle çıkarıldı, 10 test yazıldı (toplam 77). Birleşik hedef grubu da doğru işleniyor: hedef grup liderinde duruyorsa üyeler hedefsiz sayılmıyor. Ayrıca koordinatör/sözleşme sorgularının hatası sessizce yutuluyordu — hata olduğunda her şey "eksik" görünüyordu; artık ekranda kırmızı şeritle "bu sayılar güvenilmez" uyarısı çıkıyor. "Sözleşme eksik (107)" ayrı bir soru: 17 Pasif sayısı 09-09'daki SQL'in çalıştığını gösteriyor, aynı transaction 84 sözleşme de yazmıştı; sözleşmelerin hâlâ orada olup olmadığını `supabase/sorgular/profil_eksik_kontrol.sql` kesin söyleyecek.
 
 ### Son İşlem — Beklenen öğretmen sapması tek kaynağa taşındı (2026-09-22)
