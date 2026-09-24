@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Handshake } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SchoolsClient } from "@/components/schools/schools-client";
-import { SchoolCompleteness, type IncompleteSchool } from "@/components/schools/school-completeness";
+import { SchoolCompleteness } from "@/components/schools/school-completeness";
+import { profilEksikleri } from "@/components/schools/profil-eksikleri";
 
 export const metadata = { title: "Okullar — TeacherX CRM" };
 
@@ -10,45 +11,31 @@ export default async function OkullarPage() {
   const supabase = createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
-  const [{ data: rawSchools }, { data: member }, { data: coordRows }, { data: contractRows }] = await Promise.all([
+  const [schoolsRes, { data: member }, coordRes, contractRes] = await Promise.all([
     supabase.from("schools").select("*").order("name", { ascending: true }),
     supabase.from("team_members").select("role").eq("id", user?.id ?? "").single(),
     supabase.from("coordinators").select("school_id"),
-    supabase.from("contracts").select("school_id, expected_teacher_count"),
+    supabase.from("contracts").select("school_id"),
   ]);
 
-  const schools = rawSchools ?? [];
+  const schools = schoolsRes.data ?? [];
   const canWrite = member?.role !== "viewer";
 
-  // Profil tamamlama hesabı
-  const coordSet = new Set((coordRows ?? []).map((c: { school_id: string }) => c.school_id));
-  const contractSet = new Set<string>();
-  const expectedSet = new Set<string>();
-  for (const c of contractRows ?? []) {
-    contractSet.add(c.school_id);
-    if (c.expected_teacher_count != null) expectedSet.add(c.school_id);
-  }
+  /*
+   * Sorgu hatasını YUTMA. Koordinatör ya da sözleşme sorgusu hata verirse
+   * (RLS, şema değişikliği) boş dizi dönüyordu ve ekran "hepsinde eksik"
+   * diyordu — veri yokmuş gibi. Sessiz yanlış yerine görünür uyarı.
+   */
+  const sorguHatasi = [
+    coordRes.error && `koordinatörler: ${coordRes.error.message}`,
+    contractRes.error && `sözleşmeler: ${contractRes.error.message}`,
+  ].filter(Boolean).join(" · ") || null;
 
-  const incomplete: IncompleteSchool[] = [];
-  const missingCounts: Record<string, number> = { "Koordinatör": 0, "Sözleşme": 0, "Beklenen öğretmen": 0 };
-  for (const s of schools) {
-    const missing: string[] = [];
-    /*
-     * KONUM ARTIK PROFİL TAMAMLAMA ŞARTI DEĞİL. Kural il VE ilçe istiyordu;
-     * rapordan gelen kurumların çoğunda ilçe anlamlı bir bilgi değil ve o
-     * rozet 101 okulda kalıcı olarak açık kalıyordu. Sürekli açık kalan bir
-     * uyarı, bakılmayan bir uyarıdır — asıl eksikleri de gizler.
-     * Konum bilgisi duruyor, okul detayında ve listede görünüyor;
-     * yalnızca "profil tamam mı" hesabına girmiyor.
-     */
-    if (!coordSet.has(s.id)) missing.push("Koordinatör");
-    if (!contractSet.has(s.id)) missing.push("Sözleşme");
-    if (!expectedSet.has(s.id)) missing.push("Beklenen öğretmen");
-    if (missing.length > 0) {
-      incomplete.push({ id: s.id, name: s.name, missing });
-      missing.forEach((m) => (missingCounts[m] += 1));
-    }
-  }
+  const ozet = profilEksikleri(
+    schools,
+    new Set((coordRes.data ?? []).map((c: { school_id: string }) => c.school_id)),
+    new Set((contractRes.data ?? []).map((c: { school_id: string }) => c.school_id)),
+  );
 
   return (
     <div className="space-y-6">
@@ -64,7 +51,7 @@ export default async function OkullarPage() {
           <Handshake className="h-4 w-4" /> Çalıştığımız Okullar
         </Link>
       </div>
-      <SchoolCompleteness total={schools.length} incomplete={incomplete} missingCounts={missingCounts} />
+      <SchoolCompleteness total={schools.length} incomplete={ozet.eksikler} missingCounts={ozet.sayilar} hata={sorguHatasi} />
 
       <SchoolsClient schools={schools} canWrite={canWrite} />
     </div>
