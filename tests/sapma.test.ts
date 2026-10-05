@@ -111,3 +111,49 @@ describe("bilinirseTopla", () => {
     expect(bilinirseTopla([K("X", 1, null, null, 3), K("Y", 1, null, null, null)], (k) => k.sertifikaSayisi)).toBeNull();
   });
 });
+
+describe("sapmaHesapla — çok üyeli gruplar (Final / Sevinç şekli)", () => {
+  /*
+   * Mektebim'de tek bir pazarlık hedefi tek üyede duruyordu. Final ve Sevinç'te
+   * okulların kendi hedefleri girili ve üyelere dağılmış durumda; hesabın bunu
+   * da doğru toplaması gerekiyor, yoksa hedefleri tek üyeye taşımak zorunda
+   * kalırdık — ki "Sevinç Koleji" ile "Sevinç Eğitim Kurumları" ad
+   * normalleştirmesinde aynı değere indiği için lider seçimi güvenilmez.
+   */
+  it("üç üyeli grupta hedefleri de gerçekleri de toplar", () => {
+    const o = sapmaHesapla([
+      K("Sevinç Koleji", 120, 130, "Sevinç Okulları"),
+      K("Sevinç Anaokulları", 40, 35, "Sevinç Okulları"),
+      K("Sevinç Eğitim Kurumları", 60, 60, "Sevinç Okulları"),
+    ]);
+    expect(o.birimler).toHaveLength(1);
+    expect(o.birimler[0]).toMatchObject({
+      ad: "Sevinç Okulları", beklenen: 225, gercek: 220, fark: -5, kurumSayisi: 3,
+    });
+  });
+
+  it("hedefsiz üye grubun gerçeğine girer ama hedefini şişirmez", () => {
+    const o = sapmaHesapla([
+      K("Final Eğitim Kurumları", 300, 320, "Final Okulları"),
+      K("Final Akademi Eğitim Kurumları", 180, null, "Final Okulları"),
+    ]);
+    // Hedef yalnız birinde: 320. Gerçek ikisinin toplamı: 480.
+    expect(o.birimler[0]).toMatchObject({ beklenen: 320, gercek: 480, fark: 160 });
+  });
+
+  it("iki ayrı grubu birbirine karıştırmaz", () => {
+    const o = sapmaHesapla([
+      K("Final Eğitim Kurumları", 300, 300, "Final Okulları"),
+      K("Sevinç Koleji", 120, 130, "Sevinç Okulları"),
+    ]);
+    expect(o.birimler.map((b) => b.ad).sort()).toEqual(["Final Okulları", "Sevinç Okulları"]);
+    expect(o.sapmalar.map((s) => s.ad)).toEqual(["Sevinç Okulları"]);
+  });
+
+  it("grup üyeleri tabloda tek tek sapma göstermez", () => {
+    for (const k of [K("Sevinç Koleji", 120, 130, "Sevinç Okulları"),
+                     K("Sevinç Anaokulları", 40, null, "Sevinç Okulları")]) {
+      expect(kurumSapmasi(k)).toBeNull();
+    }
+  });
+});
