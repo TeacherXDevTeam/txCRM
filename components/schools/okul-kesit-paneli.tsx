@@ -81,57 +81,80 @@ function Egri({ degerler }: { degerler: number[] }) {
   );
 }
 
-export function OkulKesitPaneli({
-  okulAdi, noktalar, subeler,
-}: { okulAdi: string; noktalar: OkulKesitNoktasi[]; subeler: OkulKesitSubesi[] }) {
-  if (noktalar.length === 0) return null;
-
-  /*
-   * Aynı kesitte BİRDEN ÇOK kurum bu okula bağlıysa bunlar zaman serisi
-   * değildir — eşleştirme hatasıdır. Önceki sürüm satırları tarihe bakmadan
-   * sıralayıp "2 kesit" sanıyor ve iki ayrı kurumun farkını "değişim" diye
-   * gösteriyordu (ALKEV sayfasında +1.328 öğretmen, −23,6 puan çıktı).
-   * Böyle bir durumda sayı üretmek yanlış; hatayı göstermek doğru.
-   */
-  const kesitBasina = new Map<string, OkulKesitNoktasi[]>();
+/**
+ * Aynı kesitte bu okula bağlı birden çok kurumu TEK noktaya indirger.
+ *
+ * Rapor aynı okulu birden çok kurum adıyla getirebiliyor ve bu kasıtlı:
+ * "Final Eğitim Kurumları" ile "Final Akademi Eğitim Kurumları" CRM'de tek
+ * "Final Okulları" kaydı. Önceki sürüm bunu eşleştirme hatası sayıp sayıları
+ * hiç göstermiyordu; oysa doğru davranış birleştirmek.
+ *
+ * Ortalamalar öğretmen sayısıyla AĞIRLIKLI — kurum ortalamalarının ortalaması
+ * değil. Bilinmeyen (null) bir değer varsa toplam da bilinmez: "0 sertifika"
+ * ile "sertifika bilinmiyor" aynı şey değil.
+ */
+export function kesitleriBirlestir(noktalar: OkulKesitNoktasi[]): BirlesikNokta[] {
+  const tarihe = new Map<string, OkulKesitNoktasi[]>();
   for (const n of noktalar) {
-    const liste = kesitBasina.get(n.tarih);
-    if (liste) liste.push(n); else kesitBasina.set(n.tarih, [n]);
+    const l = tarihe.get(n.tarih);
+    if (l) l.push(n); else tarihe.set(n.tarih, [n]);
   }
-  const cakisanTarih = [...kesitBasina.entries()].find(([, l]) => l.length > 1);
 
-  if (cakisanTarih) {
-    const [tarih, cakisanlar] = cakisanTarih;
-    return (
-      <section className="bg-white rounded-xl border border-red-200 p-5">
-        <h2 className="text-base font-semibold text-gray-900">Eğitim Tamamlama</h2>
-        <p className="mt-1 text-sm text-red-700">
-          Bu okula {formatDate(tarih)} kesitinde <b>{tr(cakisanlar.length)} ayrı kurum</b> bağlı
-          görünüyor. Bu bir eşleştirme hatası — sayılar birleştirilirse yanıltıcı olacağı için
-          gösterilmiyor.
-        </p>
-        <div className="mt-3 space-y-1.5">
-          {cakisanlar.map((c) => (
-            <div key={c.kurumAdi} className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2">
-              <span className="min-w-0 truncate text-sm text-gray-800">{c.kurumAdi}</span>
-              <span className="shrink-0 text-xs text-gray-500">
-                {tr(c.ogretmenSayisi)} öğr. · %{tr1(c.ilerlemeOrtalamasi)}
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
-          Düzeltmek için Raporlar → &quot;Eşleştirme&quot;den bu kurumlardan yalnızca birini bu okula
-          bağlı bırakın; diğerini doğru okula bağlayın ya da yeni okul olarak ekleyin.{" "}
-          <Link href="/raporlar" className="underline hover:text-gray-600">Raporlar</Link>
-        </p>
-      </section>
-    );
-  }
+  const topla = (l: OkulKesitNoktasi[], sec: (n: OkulKesitNoktasi) => number) =>
+    l.reduce((a, n) => a + sec(n), 0);
+  const toplaBilinirse = (l: OkulKesitNoktasi[], sec: (n: OkulKesitNoktasi) => number | null) => {
+    let t = 0;
+    for (const n of l) { const v = sec(n); if (v == null) return null; t += v; }
+    return t;
+  };
+
+  return [...tarihe.entries()]
+    .map(([tarih, l]) => {
+      const ogretmen = topla(l, (n) => n.ogretmenSayisi);
+      const agirlikli = (sec: (n: OkulKesitNoktasi) => number) =>
+        ogretmen ? l.reduce((a, n) => a + sec(n) * n.ogretmenSayisi, 0) / ogretmen : 0;
+      return {
+        tarih,
+        kurumAdlari: l.map((n) => n.kurumAdi).sort((a, b) => a.localeCompare(b, "tr")),
+        ogretmenSayisi: ogretmen,
+        subeSayisi: topla(l, (n) => n.subeSayisi),
+        egitimSayisi: toplaBilinirse(l, (n) => n.egitimSayisi),
+        ilerlemeOrtalamasi: agirlikli((n) => n.ilerlemeOrtalamasi),
+        tamamlanmaOrani: agirlikli((n) => n.tamamlanmaOrani),
+        sertifikaSayisi: toplaBilinirse(l, (n) => n.sertifikaSayisi),
+        hicBaslamayan: topla(l, (n) => n.hicBaslamayan),
+        tumunuTamamlayan: topla(l, (n) => n.tumunuTamamlayan),
+      };
+    })
+    .sort((a, b) => a.tarih.localeCompare(b.tarih));
+}
+
+export interface BirlesikNokta {
+  tarih: string;
+  /** O kesitte bu okula bağlı kurum adları — birden çoksa hepsi */
+  kurumAdlari: string[];
+  ogretmenSayisi: number;
+  subeSayisi: number;
+  egitimSayisi: number | null;
+  ilerlemeOrtalamasi: number;
+  tamamlanmaOrani: number;
+  sertifikaSayisi: number | null;
+  hicBaslamayan: number;
+  tumunuTamamlayan: number;
+}
+
+export function OkulKesitPaneli({
+  okulAdi, noktalar: hamNoktalar, subeler,
+}: { okulAdi: string; noktalar: OkulKesitNoktasi[]; subeler: OkulKesitSubesi[] }) {
+  if (hamNoktalar.length === 0) return null;
+
+  const noktalar = kesitleriBirlestir(hamNoktalar);
 
   const son = noktalar[noktalar.length - 1];
   const onceki = noktalar.length > 1 ? noktalar[noktalar.length - 2] : null;
-  const adFarkli = son.kurumAdi.trim() !== okulAdi.trim();
+  // Rapordaki adlar okul adından farklıysa göster — eşleştirmenin doğruluğu
+  // tek bakışta görülsün. Birden çok kurum varsa hepsi yazılır.
+  const farkliAdlar = son.kurumAdlari.filter((a) => a.trim() !== okulAdi.trim());
 
   return (
     <section className="bg-white rounded-xl border p-5">
@@ -141,7 +164,9 @@ export function OkulKesitPaneli({
           <p className="text-xs text-gray-400">
             {formatDate(son.tarih)} kesiti
             {noktalar.length > 1 && ` · ${tr(noktalar.length)} kesit`}
-            {adFarkli && <> · raporda <span className="text-gray-500">{son.kurumAdi}</span></>}
+            {farkliAdlar.length > 0 && (
+              <> · raporda <span className="text-gray-500">{farkliAdlar.join(" · ")}</span></>
+            )}
           </p>
         </div>
         <Link href="/raporlar" className="inline-flex shrink-0 items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
