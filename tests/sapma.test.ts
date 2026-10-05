@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import {
   sapmaHesapla, kurumSapmasi, bilinirseTopla, type KesitKurum,
 } from "@/components/reports/kesit";
+import { kesitleriBirlestir } from "@/components/schools/okul-kesit-paneli";
 
 const K = (
   kurumAdi: string, ogretmen: number,
@@ -219,5 +220,59 @@ describe("sapmaHesapla — birden çok kurum tek okula bağlı", () => {
     ]);
     expect(o.birimler).toHaveLength(1);
     expect(o.birimler[0]).toMatchObject({ ad: "G", beklenen: 500, gercek: 350, kurumSayisi: 3 });
+  });
+});
+
+describe("kesitleriBirlestir — okul sayfasında aynı okula bağlı kurumlar", () => {
+  /*
+   * Okul detay paneli önce bu durumu "eşleştirme hatası" sayıp hiçbir sayı
+   * göstermiyordu. Kullanıcı onayladı: tek okul olması doğru, rapor farklı
+   * adlarla gelmeye devam edecek. Doğru davranış birleştirmek.
+   */
+  const N = (tarih: string, kurumAdi: string, o: number, ilerleme: number,
+             sertifika: number | null = 0) => ({
+    tarih, kurumAdi, ogretmenSayisi: o, subeSayisi: 1, egitimSayisi: 2,
+    ilerlemeOrtalamasi: ilerleme, tamamlanmaOrani: ilerleme - 5,
+    sertifikaSayisi: sertifika, hicBaslamayan: 1, tumunuTamamlayan: 1,
+  });
+
+  it("aynı kesitteki iki kurumu tek noktaya indirger", () => {
+    const b = kesitleriBirlestir([
+      N("2026-10-05", "Final Eğitim Kurumları", 850, 40),
+      N("2026-10-05", "Final Akademi Eğitim Kurumları", 225, 20),
+    ]);
+    expect(b).toHaveLength(1);
+    expect(b[0].ogretmenSayisi).toBe(1075);
+    expect(b[0].kurumAdlari).toEqual(["Final Akademi Eğitim Kurumları", "Final Eğitim Kurumları"]);
+  });
+
+  it("ortalamayı öğretmen sayısıyla ağırlıklandırır", () => {
+    const b = kesitleriBirlestir([
+      N("2026-10-05", "A", 850, 40),
+      N("2026-10-05", "B", 225, 20),
+    ]);
+    expect(b[0].ilerlemeOrtalamasi).toBeCloseTo((850 * 40 + 225 * 20) / 1075, 5);
+    expect(b[0].ilerlemeOrtalamasi).not.toBeCloseTo(30, 1); // düz ortalama
+  });
+
+  it("bilinmeyen sertifika toplamı bilinmez bırakır", () => {
+    const b = kesitleriBirlestir([
+      N("2026-10-05", "A", 10, 40, 5),
+      N("2026-10-05", "B", 10, 40, null),
+    ]);
+    expect(b[0].sertifikaSayisi).toBeNull();
+  });
+
+  it("farklı kesitleri birleştirmez, tarihe göre sıralar", () => {
+    const b = kesitleriBirlestir([
+      N("2026-10-05", "A", 10, 50),
+      N("2026-07-13", "A", 8, 30),
+    ]);
+    expect(b.map((x) => x.tarih)).toEqual(["2026-07-13", "2026-10-05"]);
+  });
+
+  it("tek kurumlu okulda davranış değişmez", () => {
+    const b = kesitleriBirlestir([N("2026-10-05", "ALKEV", 285, 60)]);
+    expect(b[0]).toMatchObject({ ogretmenSayisi: 285, ilerlemeOrtalamasi: 60, kurumAdlari: ["ALKEV"] });
   });
 });

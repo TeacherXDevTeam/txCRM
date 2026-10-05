@@ -189,14 +189,23 @@ export function KesitEslestirme({
         <Kutu etiket="Bağlanmayacak" deger={yokSayisi} renk="text-tx-gri" />
       </div>
 
+      {/*
+        Bu bir HATA DEĞİL, bilgi. Rapor aynı okulu birden çok kurum adıyla
+        getirebiliyor ve bu kasıtlı olabiliyor ("Final Eğitim Kurumları" +
+        "Final Akademi Eğitim Kurumları" → tek "Final Okulları" kaydı).
+        Hesap artık bunları okul düzeyinde topluyor, veri karışmıyor.
+        Eskiden kırmızı "hata" diye gösteriliyordu; her yüklemede çıkan ve
+        aslında doğru olan bir uyarı, bakılmayan bir uyarıya dönüşür.
+      */}
       {cakisanOkullar.length > 0 && (
-        <div className="rounded border-l-[3px] border-tx-kirmizi bg-white px-4 py-3 text-[13px]">
+        <div className="rounded border-l-[3px] border-tx-cizgi bg-white px-4 py-3 text-[13px]">
           <p className="font-medium text-tx-metin">
             {tr(cakisanOkullar.length)} okula birden fazla kurum bağlanıyor
           </p>
           <p className="mt-0.5 text-tx-gri">
-            Aynı okula iki kurum bağlanırsa o okulun sayfasında ikisinin verisi karışır.
-            Her satırda yalnızca birini bırakın.
+            Bu kurumların öğretmenleri ve hedefi o okulda <b className="font-medium text-tx-metin">toplanır</b>,
+            tek satır olarak kontrol edilir. Kasıtlıysa bir şey yapmanıza gerek yok;
+            yanlış bir eşleşme varsa aşağıdan düzeltin.
           </p>
           <ul className="mt-2 space-y-1">
             {cakisanOkullar.map((c) => (

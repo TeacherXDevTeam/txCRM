@@ -131,17 +131,25 @@ export default async function OkulDetailPage({ params }: { params: { id: string 
       }))
       .sort((a, b) => a.tarih.localeCompare(b.tarih));
 
-    // Şubeler yalnızca EN SON kesitten — eskisiyle karışırsa toplam şişer.
-    const sonSatir = satirlar
-      .filter((r) => r.kesit !== null)
-      .sort((a, b) => a.kesit!.kesit_tarihi.localeCompare(b.kesit!.kesit_tarihi))
+    /*
+     * Şubeler yalnızca EN SON kesitten — eskisiyle karışırsa toplam şişer.
+     * O kesitte bu okula bağlı BİRDEN ÇOK kurum olabilir (rapor aynı okulu
+     * farklı adlarla getiriyor); hepsinin şubeleri alınır.
+     */
+    const bagliSatirlar = satirlar.filter((r) => r.kesit !== null);
+    const sonTarih = bagliSatirlar
+      .map((r) => r.kesit!.kesit_tarihi)
+      .sort((a, b) => a.localeCompare(b))
       .at(-1);
+    const sonKurumIdleri = bagliSatirlar
+      .filter((r) => r.kesit!.kesit_tarihi === sonTarih)
+      .map((r) => r.id);
 
-    if (sonSatir) {
+    if (sonKurumIdleri.length > 0) {
       const { data: subeRows } = await supabase
         .from("report_sube")
         .select("sube_adi, ogretmen_sayisi, ilerleme_ortalamasi")
-        .eq("kurum_id", sonSatir.id);
+        .in("kurum_id", sonKurumIdleri);
 
       kesitSubeleri = ((subeRows ?? []) as unknown as {
         sube_adi: string; ogretmen_sayisi: number; ilerleme_ortalamasi: string;
