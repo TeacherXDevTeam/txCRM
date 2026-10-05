@@ -99,6 +99,15 @@ export interface KesitKurum {
    * Gruplu kurumlar bireysel değil, grup toplamı olarak kontrol edilir.
    */
   beklenenGrup?: string | null;
+  /**
+   * Eşleşen okulun id'si. Hedef kontrolünde ŞART: rapordaki birden çok kurum
+   * aynı okula bağlanabiliyor (ör. "Final Eğitim Kurumları" ve "Final Akademi
+   * Eğitim Kurumları" → tek "Final Okulları" kaydı). O durumda hedef okulun
+   * kendisine aittir, her kuruma ayrı ayrı değil.
+   */
+  okulId?: string | null;
+  /** Eşleşen okulun adı — birden çok kurum tek okula bağlıysa satır başlığı */
+  okulAdi?: string | null;
   subeler: KesitSube[];
   /** Özet dökümde boş kalır */
   egitimler: KesitEgitim[];
@@ -524,6 +533,12 @@ export interface SapmaOzeti {
   toplam: { beklenen: number; gercek: number; fark: number };
   /** Hedefi olmayan (ve gruba da girmeyen) kurum sayısı — kontrol dışı */
   hedefsizKurum: number;
+  /**
+   * Kurum adı → tablo satırında gösterilecek sapma.
+   * Birim birden çok kurumdan oluşuyorsa (grup, ya da aynı okula bağlı
+   * birkaç kurum) null: o satır tek başına kontrol edilmiyor.
+   */
+  satirSapmasi: Map<string, number | null>;
 }
 
 /**
@@ -544,32 +559,95 @@ export interface SapmaOzeti {
  *   küme üzerinden olduğu için toplam.fark = toplam.gercek − toplam.beklenen
  */
 export function sapmaHesapla(kurumlar: KesitKurum[]): SapmaOzeti {
+  /*
+   * ADIM 1 — OKUL DÜZEYİNDE TOPLA.
+   * Rapordaki birden çok kurum aynı okula bağlanabiliyor. Hedef okulun
+   * kendisine ait: her kuruma ayrı ayrı sayılırsa hedef katlanır. Gerçek
+   * öğretmen sayıları toplanır, hedef BİR KEZ alınır.
+   *
+   * Bu gerçek bir hatadan doğdu: "Final Eğitim Kurumları" (850 öğretmen) ve
+   * "Final Akademi Eğitim Kurumları" (225) tek "Final Okulları" kaydına
+   * bağlıydı; ikisi de 2.908'lik hedefle ayrı ayrı karşılaştırılıp
+   * −2.058 ve −2.683 diye iki ayrı sapma üretiyordu. Doğrusu tek satır:
+   * 1.075 / 2.908 → −1.833.
+   */
+  interface OkulBirimi {
+    anahtar: string;
+    ad: string;
+    grup: string | null;
+    beklenen: number | null;
+    gercek: number;
+    kurumlar: string[];
+  }
+  const okullar = new Map<string, OkulBirimi>();
+
+  for (const k of kurumlar) {
+    // Okula bağlı değilse kurumun kendisi bir birimdir
+    const anahtar = k.okulId ?? `kurum:${k.kurumAdi}`;
+    const mevcut = okullar.get(anahtar);
+    if (mevcut) {
+      mevcut.gercek += k.ogretmenSayisi;
+      mevcut.kurumlar.push(k.kurumAdi);
+      // Hedef okulun; tekrar eklenmez. Bir kurumda doluysa o geçerlidir.
+      if (mevcut.beklenen == null) mevcut.beklenen = k.beklenenOgretmen ?? null;
+      if (mevcut.grup == null) mevcut.grup = k.beklenenGrup ?? null;
+    } else {
+      okullar.set(anahtar, {
+        anahtar,
+        ad: k.okulAdi ?? k.kurumAdi,
+        grup: k.beklenenGrup ?? null,
+        beklenen: k.beklenenOgretmen ?? null,
+        gercek: k.ogretmenSayisi,
+        kurumlar: [k.kurumAdi],
+      });
+    }
+  }
+
+  /*
+   * ADIM 2 — GRUPLARI TOPLA.
+   * Birleşik hedef grubunda hedef tek üyede durur, diğerlerinde NULL;
+   * okul düzeyinde toplandıktan sonra toplamak doğru sonucu verir.
+   */
   const birimler: SapmaBirimi[] = [];
   let hedefsizKurum = 0;
+  const satirSapmasi = new Map<string, number | null>();
 
-  const gruplar = new Map<string, { beklenen: number; gercek: number; adet: number }>();
-  for (const k of kurumlar) {
-    if (k.beklenenGrup) {
-      const g = gruplar.get(k.beklenenGrup) ?? { beklenen: 0, gercek: 0, adet: 0 };
-      g.beklenen += k.beklenenOgretmen ?? 0;
-      g.gercek += k.ogretmenSayisi;
-      g.adet += 1;
-      gruplar.set(k.beklenenGrup, g);
-    } else if (k.beklenenOgretmen != null) {
-      birimler.push({
-        ad: k.kurumAdi, beklenen: k.beklenenOgretmen, gercek: k.ogretmenSayisi,
-        fark: k.ogretmenSayisi - k.beklenenOgretmen, grup: false, kurumSayisi: 1,
-      });
-    } else {
-      hedefsizKurum++;
+  const gruplar = new Map<string, { beklenen: number; gercek: number; okul: number; kurum: number }>();
+
+  for (const o of okullar.values()) {
+    if (o.grup) {
+      const g = gruplar.get(o.grup) ?? { beklenen: 0, gercek: 0, okul: 0, kurum: 0 };
+      g.beklenen += o.beklenen ?? 0;
+      g.gercek += o.gercek;
+      g.okul += 1;
+      g.kurum += o.kurumlar.length;
+      gruplar.set(o.grup, g);
+      for (const ad of o.kurumlar) satirSapmasi.set(ad, null);
+      continue;
+    }
+
+    if (o.beklenen == null) {
+      hedefsizKurum += o.kurumlar.length;
+      for (const ad of o.kurumlar) satirSapmasi.set(ad, null);
+      continue;
+    }
+
+    birimler.push({
+      ad: o.ad, beklenen: o.beklenen, gercek: o.gercek,
+      fark: o.gercek - o.beklenen,
+      grup: o.kurumlar.length > 1, kurumSayisi: o.kurumlar.length,
+    });
+    // Birim tek kurumdan oluşuyorsa satırda sapma gösterilebilir
+    for (const ad of o.kurumlar) {
+      satirSapmasi.set(ad, o.kurumlar.length === 1 ? o.gercek - o.beklenen : null);
     }
   }
 
   for (const [ad, g] of gruplar) {
-    if (g.beklenen <= 0) { hedefsizKurum += g.adet; continue; }
+    if (g.beklenen <= 0) { hedefsizKurum += g.kurum; continue; }
     birimler.push({
       ad, beklenen: g.beklenen, gercek: g.gercek,
-      fark: g.gercek - g.beklenen, grup: true, kurumSayisi: g.adet,
+      fark: g.gercek - g.beklenen, grup: true, kurumSayisi: g.kurum,
     });
   }
 
@@ -583,6 +661,7 @@ export function sapmaHesapla(kurumlar: KesitKurum[]): SapmaOzeti {
       .sort((a, b) => Math.abs(b.fark) - Math.abs(a.fark) || a.ad.localeCompare(b.ad, "tr")),
     toplam: { beklenen: toplamBeklenen, gercek: toplamGercek, fark: toplamGercek - toplamBeklenen },
     hedefsizKurum,
+    satirSapmasi,
   };
 }
 

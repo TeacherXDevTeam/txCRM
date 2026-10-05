@@ -14,13 +14,14 @@ const K = (
   kurumAdi: string, ogretmen: number,
   beklenen: number | null = null, grup: string | null = null,
   sertifika: number | null = 0,
+  okulId: string | null = null, okulAdi: string | null = null,
 ): KesitKurum => ({
   kaynak: "detayli", kurumAdi, ogretmenSayisi: ogretmen, subeSayisi: 1,
   egitimSayisi: 1, kayitSayisi: ogretmen, ilerlemeOrtalamasi: 50, tamamlanmaOrani: 40,
   tamamlananEgitim: 1, sertifikaSayisi: sertifika, sertifikaAlan: sertifika,
   hicBaslamayan: 0, devamEden: 0, tumunuTamamlayan: 0, esitsizAtama: 0,
   subeler: [], egitimler: [], sertifikaAylik: [],
-  beklenenOgretmen: beklenen, beklenenGrup: grup,
+  beklenenOgretmen: beklenen, beklenenGrup: grup, okulId, okulAdi,
 });
 
 // Hata raporundaki örnek, birebir
@@ -155,5 +156,68 @@ describe("sapmaHesapla — çok üyeli gruplar (Final / Sevinç şekli)", () => 
                      K("Sevinç Anaokulları", 40, null, "Sevinç Okulları")]) {
       expect(kurumSapmasi(k)).toBeNull();
     }
+  });
+});
+
+describe("sapmaHesapla — birden çok kurum tek okula bağlı", () => {
+  /*
+   * Gerçek vaka: "Final Eğitim Kurumları" (850 öğretmen) ve "Final Akademi
+   * Eğitim Kurumları" (225) tek bir "Final Okulları" kaydına bağlıydı.
+   * Hedef 2.908 okulun; her kuruma ayrı sayılınca iki ayrı sapma çıkıyordu
+   * (−2.058 ve −2.683) ve toplam hedef ikiye katlanıyordu.
+   */
+  const FINAL = [
+    K("Final Eğitim Kurumları", 850, 2908, null, 0, "okul-final", "Final Okulları"),
+    K("Final Akademi Eğitim Kurumları", 225, 2908, null, 0, "okul-final", "Final Okulları"),
+  ];
+
+  it("hedefi bir kez sayar, gerçekleri toplar", () => {
+    const o = sapmaHesapla(FINAL);
+    expect(o.birimler).toHaveLength(1);
+    expect(o.birimler[0]).toMatchObject({
+      ad: "Final Okulları", beklenen: 2908, gercek: 1075, fark: -1833, kurumSayisi: 2,
+    });
+  });
+
+  it("hedefi İKİYE KATLAMAZ", () => {
+    const o = sapmaHesapla(FINAL);
+    expect(o.toplam.beklenen).toBe(2908);
+    expect(o.toplam.beklenen).not.toBe(5816);
+  });
+
+  it("eski davranıştaki iki ayrı sapmayı üretmez", () => {
+    const o = sapmaHesapla(FINAL);
+    expect(o.sapmalar).toHaveLength(1);
+    expect(o.sapmalar.map((s) => s.fark)).not.toContain(-2058);
+    expect(o.sapmalar.map((s) => s.fark)).not.toContain(-2683);
+  });
+
+  it("tabloda iki satır da tek tek sapma göstermez", () => {
+    const o = sapmaHesapla(FINAL);
+    expect(o.satirSapmasi.get("Final Eğitim Kurumları")).toBeNull();
+    expect(o.satirSapmasi.get("Final Akademi Eğitim Kurumları")).toBeNull();
+  });
+
+  it("tek kuruma bağlı okulda satır sapması gösterilir", () => {
+    const o = sapmaHesapla([K("ALKEV", 285, 300, null, 0, "okul-alkev", "ALKEV")]);
+    expect(o.satirSapmasi.get("ALKEV")).toBe(-15);
+  });
+
+  it("okula bağlı olmayan kurumlar birbirine karışmaz", () => {
+    const o = sapmaHesapla([K("A", 50, 60), K("B", 70, 80)]);
+    expect(o.birimler).toHaveLength(2);
+    expect(o.satirSapmasi.get("A")).toBe(-10);
+    expect(o.satirSapmasi.get("B")).toBe(-10);
+  });
+
+  it("grup içinde aynı okula bağlı kurumlar da bir kez sayılır", () => {
+    // Grup: iki okul; birinde iki kurum var, hedef o okulda
+    const o = sapmaHesapla([
+      K("Kurum A1", 100, 500, "G", 0, "okul-1", "Okul 1"),
+      K("Kurum A2", 50, 500, "G", 0, "okul-1", "Okul 1"),
+      K("Kurum B", 200, null, "G", 0, "okul-2", "Okul 2"),
+    ]);
+    expect(o.birimler).toHaveLength(1);
+    expect(o.birimler[0]).toMatchObject({ ad: "G", beklenen: 500, gercek: 350, kurumSayisi: 3 });
   });
 });

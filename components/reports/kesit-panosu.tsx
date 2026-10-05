@@ -367,7 +367,7 @@ export function KesitPanosu({ kullaniciId, okullar, kayitli, trend, oncekiKararl
                 {sapmalar.slice(0, GOSTER).map((s) => (
                   <li key={s.ad}>
                     <b className="text-tx-metin">{s.ad}</b>
-                    {s.grup && <span className="text-tx-gri"> ({tr(s.kurumSayisi)} okul toplam)</span>}
+                    {s.grup && <span className="text-tx-gri"> ({tr(s.kurumSayisi)} kurum toplam)</span>}
                     : beklenen {tr(s.beklenen)}, raporda {tr(s.gercek)} →{" "}
                     <b className={s.fark < 0 ? "text-tx-kirmizi" : "text-tx-metin"}>
                       {s.fark > 0 ? "+" : ""}{tr(s.fark)} {s.fark < 0 ? "eksik" : "fazla"}
