@@ -2,7 +2,10 @@
 
 > Her işlem sonunda güncellenir. Son güncelleme: 2026-09-22
 
-'### Son İşlem — Pasif okullar profil tamamlama kapsamı dışında (2026-09-24)
+'### Son İşlem — Final ve Sevinç birleşik hedef grupları (2026-10-05)
+İki yeni grup kuruldu: "Final Okulları" (Final Eğitim Kurumları + Final Akademi Eğitim Kurumları) ve "Sevinç Okulları" (Sevinç Koleji + Sevinç Anaokulları + Sevinç Eğitim Kurumları). Adlar 05.10 raporundan birebir alındı — kullanıcı "Sevinç Anaokulu" demişti, kayıtlardaki ad "Sevinç Anaokulları". Mektebim'den iki farkla ilerlendi. Birincisi: Mektebim'de 4000'lik tek pazarlık hedefi tek üyede tutuluyordu; burada okulların kendi hedefleri zaten girili ve `sapmaHesapla` üyelerin hedeflerini topladığı için hedefler taşınmıyor, veri korunuyor. İkincisi: eşleştirme tam adla yapılıyor, normalleştirmeyle değil — çünkü "Sevinç Koleji" ile "Sevinç Eğitim Kurumları" normalleştirmede aynı değere ('sevinc') iniyor ve Mektebim'deki "lideri normalleştirilmiş adla seç" adımı burada ikisini ayırt edemezdi. SQL `supabase/sorgular/beklenen_grup_final_sevinc.sql`: önce keşif, sonra transaction içinde atama ve satır sayısı kontrolü, sonra doğrulama. 4 yeni test (toplam 85): üç üyeli grupta hedeflerin ve gerçeklerin toplanması, hedefsiz üyenin gerçeğe girip hedefi şişirmemesi, iki grubun karışmaması, üyelerin tabloda tek tek sapma göstermemesi. Tarayıcıda doğrulandı: pano "Final Okulları (2 okul toplam) +10 fazla · Sevinç Okulları (3 okul toplam) −5 eksik".
+
+### Son İşlem — Pasif okullar profil tamamlama kapsamı dışında (2026-09-24)
 Artık çalışılmayan bir kurumun koordinatörünü, sözleşmesini ve hedefini kovalamak iş değil gürültü; 17 pasif okul kuyruğu şişirip asıl eksikleri gizliyordu. `profilEksikleri` artık `status = 'pasif'` okulları hesaba katmıyor; yüzde ve "x/y okul tamam" kapsamdaki okullar üzerinden, kaç okulun kapsam dışı kaldığı da başlıkta yazıyor. Bir incelik: grup hedefi TÜM okullardan toplanıyor, yalnız kapsamdakilerden değil — hedef pasif bir grup liderinde duruyorsa aktif üyeler hedefsiz sayılmamalı. Potansiyel okullar kapsamda kalıyor (sadece pasif çıkarıldı). 4 yeni test, toplam 81. Gerçek dağılımla (107 okul · 90 aktif · 17 pasif) tarayıcıda doğrulandı: "59/90 okul tamam · 31 okulda eksik bilgi · 17 pasif okul kapsam dışı".
 
 ### Son İşlem — Profil tamamlama beklenen öğretmeni yanlış yerden okuyordu (2026-09-24)
