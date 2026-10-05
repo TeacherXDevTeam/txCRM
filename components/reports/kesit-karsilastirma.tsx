@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ArrowUpDown, Info } from "lucide-react";
-import { kurumSapmasi, sapmaHesapla, bilinirseTopla, type KesitKurum } from "./kesit";
+import { sapmaHesapla, bilinirseTopla, type KesitKurum } from "./kesit";
 import { tr } from "./brand";
 
 type Sutun =
@@ -26,8 +26,6 @@ const BASLIKLAR: { alan: Sutun; ad: string; sayi: boolean; tersRenk?: boolean; a
   { alan: "sapma",              ad: "Sapma",              sayi: true, tersRenk: true, aciklama: "Gerçek − beklenen. Eksik (−) kırmızı. Gruplu okullar tek tek değil grup toplamı olarak kontrol edilir (— görünür)." },
 ];
 
-/* Satır sapması ve toplamlar kesit.ts'teki tek kaynaktan gelir (sapmaHesapla). */
-const sapmaOf = kurumSapmasi;
 
 /** Düşük → yüksek kırmızıdan yeşile; tersRenk'te yüksek kırmızı. */
 function skala(oran: number, ters = false): string {
@@ -47,6 +45,11 @@ export function KesitKarsilastirma({
 
   // Alt satırdaki Beklenen/Sapma pano uyarısıyla AYNI hesaptan gelir.
   const ozet = useMemo(() => sapmaHesapla(kurumlar), [kurumlar]);
+  /*
+   * Satır sapması özetten gelir, kurumdan değil: aynı okula bağlı birkaç
+   * kurum varsa tek tek sapma göstermek yanıltıcı olur (hedef okulun).
+   */
+  const sapmaOf = (k: KesitKurum) => ozet.satirSapmasi.get(k.kurumAdi) ?? null;
   // Bilinmeyen sertifika "0" değil "—": özet dökümde sertifika bilgisi yok.
   const toplamSertifika = bilinirseTopla(kurumlar, (k) => k.sertifikaSayisi);
   const toplamSertifikaAlan = bilinirseTopla(kurumlar, (k) => k.sertifikaAlan);

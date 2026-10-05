@@ -47,6 +47,7 @@ export default async function RaporlarPage() {
   const grupByOkul = new Map<string, string | null>(
     (okulRows ?? []).map((o) => [o.id, o.beklenen_grup]),
   );
+  const adByOkul = new Map<string, string>((okulRows ?? []).map((o) => [o.id, o.name]));
 
   // En son kaydedilmiş kesit. Tablolar yoksa sessizce boş görünmek yerine
   // kullanıcıya ne yapması gerektiğini söyleriz.
@@ -87,6 +88,10 @@ export default async function RaporlarPage() {
             ...kur,
             beklenenOgretmen: okulId ? beklenenByOkul.get(okulId) ?? null : null,
             beklenenGrup: okulId ? grupByOkul.get(okulId) ?? null : null,
+            // Hedef kontrolü okul düzeyinde toplandığı için okul kimliği şart:
+            // birden çok kurum aynı okula bağlı olabiliyor.
+            okulId: okulId ?? null,
+            okulAdi: okulId ? adByOkul.get(okulId) ?? null : null,
           };
         }),
       kurumIdleri: Object.fromEntries((kurumlar ?? []).map((r) => [r.kurum_adi, r.id])),
